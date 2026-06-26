@@ -20,7 +20,7 @@ const COINS = [
   {
     id: "pepe",
     name: "PEPE",
-    img: "/PEPE.png",
+    img: "/PEPE.PNG",
     bg: "#1a3a1a",
     accent: "#3ddc52",
     accentDark: "#2ab83f",
@@ -38,7 +38,7 @@ const COINS = [
   {
     id: "bonk",
     name: "BONK",
-    img: "/BONK.png",
+    img: "/BONK.PNG",
     bg: "#2e1800",
     accent: "#f97316",
     accentDark: "#ea6700",
@@ -56,7 +56,7 @@ const COINS = [
   {
     id: "brett",
     name: "BRETT",
-    img: "/BRETT.png",
+    img: "/BRETT.PNG",
     bg: "#0d1a2e",
     accent: "#3b82f6",
     accentDark: "#2563eb",
