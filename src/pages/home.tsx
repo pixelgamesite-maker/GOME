@@ -1,88 +1,93 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
-/* ── Google Apps Script Web App URL ── */
-/* Paste your deployed Apps Script URL here after setup */
+/* ── Backend ── */
 const SHEET_URL = import.meta.env.VITE_SHEET_URL ?? "";
+
+/* ── Assets ── */
+const LOGO = "/GOME-LOGO.png";
+const HERO_IMG = "/GOME-HERO.png";
+const LORE_IMG = "/GOME-LORE.jpg";
+
+/* ── Links ── */
+const X_URL = "https://x.com/gomememes";
+const PINNED_TWEET = "https://x.com/gomememes/status/1234567890";
 
 /* ── Fonts ── */
 const FONT_LINK =
-  "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Bangers&display=swap";
+  "https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap";
 
-const display = "'Bangers', cursive";
-const body    = "'Nunito', 'Segoe UI', Arial, sans-serif";
+const display = "'Fredoka', sans-serif";
+const body = "'Inter', 'Segoe UI', Arial, sans-serif";
 
-/* ── Links ── */
-const X_URL          = "https://x.com/gomememes";
-const PINNED_TWEET   = "https://x.com/gomememes/status/1234567890";
+/* ── Palette ── */
+const C = {
+  bg: "#050505",
+  bgElevated: "#0a0a0a",
+  card: "#111111",
+  cardBorder: "rgba(255,255,255,0.06)",
+  accent: "#D4A853",
+  accentLight: "rgba(212,168,83,0.12)",
+  accentGlow: "rgba(212,168,83,0.25)",
+  text: "#ffffff",
+  textMuted: "rgba(255,255,255,0.5)",
+  textDim: "rgba(255,255,255,0.2)",
+  success: "#22c55e",
+  error: "#ef4444",
+  pepe: "#3ddc52",
+  bonk: "#f97316",
+  brett: "#3b82f6",
+};
 
-/* ── Meme coin data ── */
+/* ── Coin Data ── */
 const COINS = [
   {
     id: "pepe",
     name: "PEPE",
     img: "/PEPE.PNG",
-    bg: "#1a3a1a",
-    accent: "#3ddc52",
-    accentDark: "#2ab83f",
-    textOnAccent: "#0a1a0a",
+    color: "#3ddc52",
     tagline: "The original meme. The eternal vibe.",
-    desc: [
-      "PEPE is the face of internet culture — green, eternal, and completely unserious.",
-      "Born from the deepest corners of the web, PEPE transcended meme-dom to become a cultural icon traded on-chain.",
-      "4,004 unique Pepe characters. Each one rarer than the next. No two frens alike.",
-    ],
-    stats: [["4,004","Supply"],["0.0009 ETH","Mint Price"],["ETH","Chain"],["OpenSea","Marketplace"]],
-    badge: "🐸 Rare Frens",
-    emoji: "🐸",
+    desc: "PEPE is the face of internet culture. 4,004 unique characters, each rarer than the next. No two frens alike.",
   },
   {
     id: "bonk",
     name: "BONK",
     img: "/BONK.PNG",
-    bg: "#2e1800",
-    accent: "#f97316",
-    accentDark: "#ea6700",
-    textOnAccent: "#1a0800",
+    color: "#f97316",
     tagline: "Bonk first. Ask questions never.",
-    desc: [
-      "BONK energy is raw, chaotic, and completely unstoppable. The bat swings and the market follows.",
-      "Born on Solana, adopted everywhere — BONK is the meme that punched its way into the top tier.",
-      "4,004 Bonk characters armed and ready. High energy. Low IQ. Maximum chaos.",
-    ],
-    stats: [["4,004","Supply"],["0.0009 ETH","Mint Price"],["ETH","Chain"],["OpenSea","Marketplace"]],
-    badge: "🏏 Maximum Chaos",
-    emoji: "🏏",
+    desc: "BONK energy is raw, chaotic, and unstoppable. 4,004 characters armed and ready. High energy. Maximum chaos.",
   },
   {
     id: "brett",
     name: "BRETT",
     img: "/BRETT.PNG",
-    bg: "#0d1a2e",
-    accent: "#3b82f6",
-    accentDark: "#2563eb",
-    textOnAccent: "#ffffff",
+    color: "#3b82f6",
     tagline: "Just a guy. With all the vibes.",
-    desc: [
-      "Brett doesn't try hard. Brett just exists — and somehow that's enough to move markets.",
-      "The laid-back king of Base chain. Simple design, massive community, zero apologies.",
-      "4,004 Brett editions. Each one chillin harder than the last.",
-    ],
-    stats: [["4,004","Supply"],["0.0009 ETH","Mint Price"],["ETH","Chain"],["OpenSea","Marketplace"]],
-    badge: "😎 Chill Gang",
-    emoji: "😎",
+    desc: "Brett doesn't try hard. Brett just exists. 4,004 editions, each one chillin harder than the last. The king of Base.",
   },
 ];
 
+const MINT_INFO = [
+  { label: "Total Supply", value: "12,012" },
+  { label: "Mint Price", value: "0.0009 ETH" },
+  { label: "Blockchain", value: "Ethereum" },
+  { label: "Marketplace", value: "OpenSea" },
+  { label: "Launch", value: "TBA" },
+];
+
 /* ── Helpers ── */
-function isValidEvm(a: string) { return /^0x[0-9a-fA-F]{40}$/.test(a.trim()); }
+function isValidEvm(a: string) {
+  return /^0x[0-9a-fA-F]{40}$/.test(a.trim());
+}
 function isValidUrl(u: string) {
   try {
     const url = new URL(u.trim());
     return url.protocol === "https:" || url.protocol === "http:";
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
-/* ── Scroll reveal ── */
+/* ── Scroll Reveal ── */
 function useScrollReveal(threshold = 0.1) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
@@ -90,7 +95,12 @@ function useScrollReveal(threshold = 0.1) {
     const el = ref.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.unobserve(el); } },
+      ([e]) => {
+        if (e.isIntersecting) {
+          setVisible(true);
+          obs.unobserve(el);
+        }
+      },
       { threshold }
     );
     obs.observe(el);
@@ -99,823 +109,1956 @@ function useScrollReveal(threshold = 0.1) {
   return { ref, visible };
 }
 
-/* ── Floating emoji particle ── */
-function FloatingEmojis({ emojis, color }: { emojis: string[]; color: string }) {
-  const items = Array.from({ length: 12 }, (_, i) => ({
-    emoji: emojis[i % emojis.length],
-    left: `${Math.random() * 90 + 5}%`,
-    delay: `${Math.random() * 6}s`,
-    duration: `${6 + Math.random() * 6}s`,
-    size: `${1 + Math.random() * 1.2}rem`,
-    opacity: 0.12 + Math.random() * 0.15,
-  }));
-
-  return (
-    <div style={{ position:"absolute", inset:0, overflow:"hidden", pointerEvents:"none", zIndex:0 }}>
-      {items.map((p, i) => (
-        <span key={i} style={{
-          position:"absolute", bottom:"-40px", left: p.left,
-          fontSize: p.size, opacity: p.opacity,
-          animation: `floatUp ${p.duration} ${p.delay} linear infinite`,
-          color,
-        }}>{p.emoji}</span>
-      ))}
-    </div>
-  );
-}
-
-/* ── Coin section ── */
-function CoinSection({ coin, index }: { coin: typeof COINS[0]; index: number }) {
-  const { ref, visible } = useScrollReveal();
-  const isEven = index % 2 === 0;
-
-  return (
-    <section
-      id={coin.id}
-      ref={ref}
-      style={{
-        background: coin.bg,
-        padding: "100px 0",
-        position: "relative",
-        overflow: "hidden",
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(50px)",
-        transition: "opacity 0.8s ease, transform 0.8s ease",
-      }}
-    >
-      <FloatingEmojis emojis={[coin.emoji, "✨", "💫"]} color={coin.accent} />
-
-      {/* Glow blob */}
-      <div style={{
-        position:"absolute", top:"50%", [isEven ? "left" : "right"]:"10%",
-        transform:"translateY(-50%)",
-        width:"400px", height:"400px", borderRadius:"50%",
-        background:`radial-gradient(circle,${coin.accent}18 0%,transparent 70%)`,
-        pointerEvents:"none", zIndex:0,
-      }} />
-
-      <div style={{
-        maxWidth:"1000px", margin:"0 auto", padding:"0 24px",
-        display:"flex", flexDirection: isEven ? "row" : "row-reverse",
-        alignItems:"center", gap:"60px", position:"relative", zIndex:1,
-        flexWrap:"wrap",
-      }}>
-        {/* Image */}
-        <div style={{ flex:"0 0 280px", display:"flex", justifyContent:"center" }}>
-          <div style={{
-            width:"260px", height:"260px", borderRadius:"24px",
-            background:`${coin.accent}15`,
-            border:`3px solid ${coin.accent}55`,
-            display:"flex", alignItems:"center", justifyContent:"center",
-            boxShadow:`0 0 60px ${coin.accent}33, 0 20px 60px rgba(0,0,0,0.5)`,
-            animation:"coinBob 3s ease-in-out infinite",
-            overflow:"hidden",
-          }}>
-            <img src={coin.img} alt={coin.name}
-              style={{ width:"100%", height:"100%", objectFit:"contain", padding:"20px" }}
-            />
-          </div>
-        </div>
-
-        {/* Content */}
-        <div style={{ flex:1, minWidth:"280px" }}>
-          <div style={{
-            display:"inline-block", background:`${coin.accent}22`,
-            border:`1px solid ${coin.accent}55`, borderRadius:"999px",
-            padding:"4px 14px", marginBottom:"16px",
-          }}>
-            <span style={{ fontFamily:body, fontSize:"0.72rem", fontWeight:700,
-              letterSpacing:"0.12em", textTransform:"uppercase", color:coin.accent }}>
-              {coin.badge}
-            </span>
-          </div>
-
-          <h2 style={{
-            fontFamily:display, fontSize:"clamp(4rem,10vw,7rem)",
-            color:coin.accent, margin:"0 0 8px", letterSpacing:"0.05em",
-            textShadow:`0 0 40px ${coin.accent}66`,
-            lineHeight:1,
-          }}>
-            {coin.name}
-          </h2>
-
-          <p style={{
-            fontFamily:body, fontWeight:800, fontSize:"clamp(1rem,2.5vw,1.25rem)",
-            color:"rgba(255,255,255,0.85)", margin:"0 0 24px", lineHeight:1.4,
-          }}>
-            {coin.tagline}
-          </p>
-
-          <div style={{ display:"flex", flexDirection:"column", gap:"12px", marginBottom:"32px" }}>
-            {coin.desc.map((d, i) => (
-              <p key={i} style={{
-                fontFamily:body, fontSize:"0.95rem", color:"rgba(255,255,255,0.55)",
-                margin:0, lineHeight:1.7,
-                paddingLeft:"16px",
-                borderLeft:`3px solid ${coin.accent}44`,
-              }}>{d}</p>
-            ))}
-          </div>
-
-          {/* Stats */}
-          <div style={{
-            display:"grid", gridTemplateColumns:"repeat(4,1fr)",
-            border:`1px solid ${coin.accent}22`, borderRadius:"12px",
-            overflow:"hidden", background:"rgba(0,0,0,0.25)",
-            backdropFilter:"blur(8px)",
-          }}>
-            {coin.stats.map(([val, lbl], i) => (
-              <div key={i} style={{
-                padding:"14px 10px", textAlign:"center",
-                borderLeft: i > 0 ? `1px solid ${coin.accent}18` : "none",
-              }}>
-                <p style={{ margin:0, fontFamily:display, fontSize:"1.1rem",
-                  color:coin.accent, letterSpacing:"0.04em" }}>{val}</p>
-                <p style={{ margin:"3px 0 0", fontFamily:body, fontSize:"0.52rem",
-                  letterSpacing:"0.16em", textTransform:"uppercase",
-                  color:"rgba(255,255,255,0.28)", fontWeight:700 }}>{lbl}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ── Flip card (reused from original, adapted) ── */
-function FlipCard({ index, icon, title, subtitle, done, locked, children, onFlip }: {
-  index: number; icon: string; title: string; subtitle: string;
-  done: boolean; locked: boolean; children?: React.ReactNode; onFlip?: () => void;
-}) {
-  const [flipped, setFlipped] = useState(false);
-  useEffect(() => { if (done) setFlipped(true); }, [done]);
-
-  function handleClick() {
-    if (locked || flipped) return;
-    setFlipped(true); onFlip?.();
-  }
-
-  const accent = "#f59e0b";
-
-  return (
-    <div onClick={handleClick} style={{
-      perspective: "1000px",
-      cursor: locked ? "not-allowed" : flipped ? "default" : "pointer",
-    }}>
-      <div style={{
-        position: "relative", transformStyle: "preserve-3d",
-        transition: "transform 0.6s cubic-bezier(0.23,1,0.32,1)",
-        transform: flipped ? "rotateY(180deg)" : "rotateY(0)",
-      }}>
-        {/* FRONT */}
-        <div style={{
-          backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden",
-          position: flipped ? "absolute" : "relative", inset: 0,
-          background: "rgba(255,255,255,0.06)",
-          border: `2px solid ${done ? accent + "66" : locked ? "rgba(255,255,255,0.06)" : accent + "33"}`,
-          borderRadius: "14px", padding: "18px 14px",
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          gap: "8px", minHeight: "130px", opacity: locked ? 0.4 : 1,
-        }}>
-          <span style={{ fontSize: "1.6rem" }}>{locked ? "🔒" : icon}</span>
-          <p style={{ margin: 0, fontFamily: body, fontSize: "0.88rem", fontWeight: 800,
-            color: locked ? "rgba(255,255,255,0.2)" : "#fff", textAlign: "center" }}>{title}</p>
-          {!locked && <p style={{ margin: 0, fontFamily: body, fontSize: "0.6rem",
-            color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-            Tap to open
-          </p>}
-        </div>
-
-        {/* BACK */}
-        <div style={{
-          backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden",
-          transform: "rotateY(180deg)",
-          position: flipped ? "relative" : "absolute", inset: 0,
-          background: done ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.06)",
-          border: `2px solid ${done ? accent + "55" : accent + "22"}`,
-          borderRadius: "14px", padding: "14px 12px", minHeight: "130px",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-            <div>
-              <p style={{ margin: 0, fontFamily: body, fontSize: "0.85rem", fontWeight: 800, color: "#fff" }}>{title}</p>
-              <p style={{ margin: "1px 0 0", fontFamily: body, fontSize: "0.58rem",
-                color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", textTransform: "uppercase" }}>{subtitle}</p>
-            </div>
-            {done && (
-              <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: accent,
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                  <path d="M1 4L3.5 6.5L9 1" stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-            )}
-          </div>
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ════════════════════ MAIN ════════════════════ */
-export default function Home() {
-  const [modalOpen,         setModalOpen]         = useState(false);
-  const [twitter,           setTwitter]           = useState("");
-  const [wallet,            setWallet]            = useState("");
-  const [quoteUrl,          setQuoteUrl]          = useState("");
-  const [tasks,             setTasks]             = useState<Record<string, boolean>>({});
-  const [sending,           setSending]           = useState(false);
-  const [success,           setSuccess]           = useState(false);
-  const [err,               setErr]               = useState("");
-  const [ready,             setReady]             = useState(false);
-  const [alreadySubmitted,  setAlreadySubmitted]  = useState(false);
-  const [twitterConfirmed,  setTwitterConfirmed]  = useState(false);
-  const [quoteConfirmed,    setQuoteConfirmed]    = useState(false);
-  const [walletConfirmed,   setWalletConfirmed]   = useState(false);
-
-  const c1 = twitterConfirmed && twitter.trim().length > 1;
-  const c2 = !!tasks["like"];
-  const c3 = quoteConfirmed && isValidUrl(quoteUrl);
-  const c4 = walletConfirmed && isValidEvm(wallet);
-  const allDone = c1 && c2 && c3 && c4;
-
-  const accent = "#f59e0b";
-  const accentLight = "#fbbf24";
-
+/* ── Particle Canvas ── */
+function ParticleCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    const l = document.createElement("link"); l.rel = "stylesheet"; l.href = FONT_LINK;
-    document.head.appendChild(l);
-    try {
-      const s = localStorage.getItem("gome_v1");
-      if (s) {
-        const p = JSON.parse(s);
-        setTasks(p.tasks ?? {});
-        setWallet(p.wallet ?? "");
-        setTwitter(p.twitter ?? "");
-        setQuoteUrl(p.quoteUrl ?? "");
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let w = (canvas.width = window.innerWidth);
+    let h = (canvas.height = window.innerHeight);
+    let animId: number;
+
+    interface Particle {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      size: number;
+      alpha: number;
+      color: string;
+    }
+
+    const particles: Particle[] = [];
+    const count = Math.min(80, Math.floor((w * h) / 15000));
+
+    for (let i = 0; i < count; i++) {
+      const isGold = Math.random() > 0.6;
+      particles.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        size: Math.random() * 2 + 0.5,
+        alpha: Math.random() * 0.5 + 0.1,
+        color: isGold ? C.accent : Math.random() > 0.5 ? "#6B3FA0" : "#ffffff",
+      });
+    }
+
+    function draw() {
+      ctx!.clearRect(0, 0, w, h);
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = w;
+        if (p.x > w) p.x = 0;
+        if (p.y < 0) p.y = h;
+        if (p.y > h) p.y = 0;
+
+        ctx!.beginPath();
+        ctx!.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx!.fillStyle = p.color;
+        ctx!.globalAlpha = p.alpha;
+        ctx!.fill();
       }
-      if (localStorage.getItem("gome_submitted") === "true") setAlreadySubmitted(true);
-    } catch {}
-    setTimeout(() => setReady(true), 80);
+      ctx!.globalAlpha = 1;
+
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx!.beginPath();
+            ctx!.moveTo(particles[i].x, particles[i].y);
+            ctx!.lineTo(particles[j].x, particles[j].y);
+            ctx!.strokeStyle = "rgba(212,168,83,0.08)";
+            ctx!.lineWidth = 0.5;
+            ctx!.stroke();
+          }
+        }
+      }
+
+      animId = requestAnimationFrame(draw);
+    }
+
+    draw();
+
+    const handleResize = () => {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    };
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
-  useEffect(() => {
-    if (ready) localStorage.setItem("gome_v1", JSON.stringify({ tasks, wallet, twitter, quoteUrl }));
-  }, [tasks, wallet, twitter, quoteUrl, ready]);
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+        zIndex: 1,
+      }}
+    />
+  );
+}
 
-  async function submit() {
-    if (!allDone) { setErr("Complete all missions first."); return; }
-    if (alreadySubmitted) { setErr("You already applied!"); return; }
-    if (!SHEET_URL) { setErr("Sheet URL not configured — check VITE_SHEET_URL."); return; }
-    setErr(""); setSending(true);
+/* ── Global Styles ── */
+const globalStyles = `
+  @import url('${FONT_LINK}');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: ${C.bg}; }
+  ::selection { background: ${C.accent}; color: #000; }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: ${C.bg}; }
+  ::-webkit-scrollbar-thumb { background: rgba(212,168,83,0.25); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(212,168,83,0.4); }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(212,168,83,0.15); }
+    50% { box-shadow: 0 0 40px rgba(212,168,83,0.3); }
+  }
+
+  .slide-up { animation: slideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .fade-in { animation: fadeIn 0.6s ease both; }
+  .scale-in { animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: ${C.accent} !important;
+    box-shadow: 0 0 0 3px rgba(212,168,83,0.1) !important;
+  }
+
+  .btn-primary {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    background-size: 200% 100%;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .btn-primary:hover::after {
+    opacity: 1;
+    animation: shimmer 1.5s infinite;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(212,168,83,0.3);
+  }
+
+  .btn-task {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-task:hover {
+    background: rgba(212,168,83,0.15) !important;
+    border-color: ${C.accent} !important;
+    transform: translateY(-1px);
+  }
+
+  .task-card {
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+`;
+
+/* ── Field ── */
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  error,
+  as = "input",
+  rows = 3,
+  onBlur,
+  onKeyDown,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  error?: string;
+  as?: "input" | "textarea";
+  rows?: number;
+  onBlur?: () => void;
+  onKeyDown?: (e: React.KeyboardEvent) => void;
+}) {
+  const shared: React.CSSProperties = {
+    width: "100%",
+    background: "rgba(255,255,255,0.03)",
+    border: `1px solid ${error ? C.error : "rgba(255,255,255,0.08)"}`,
+    borderRadius: 10,
+    color: "#fff",
+    fontSize: 14,
+    padding: "13px 16px",
+    fontFamily: body,
+    resize: "none",
+    display: "block",
+    transition: "border-color 0.2s, box-shadow 0.2s",
+  };
+
+  return (
+    <div style={{ marginBottom: 4 }}>
+      <label
+        style={{
+          display: "block",
+          fontSize: 11,
+          fontWeight: 700,
+          color: C.textMuted,
+          marginBottom: 8,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          fontFamily: body,
+        }}
+      >
+        {label}
+      </label>
+      {as === "textarea" ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={rows}
+          style={shared}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
+        />
+      ) : (
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          style={shared}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
+        />
+      )}
+      {error && (
+        <p
+          style={{
+            color: C.error,
+            fontSize: 12,
+            marginTop: 6,
+            fontWeight: 500,
+            fontFamily: body,
+          }}
+        >
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ── Done Badge ── */
+function DoneBadge() {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        background: C.accentLight,
+        border: `1px solid rgba(212,168,83,0.25)`,
+        borderRadius: 8,
+        padding: "5px 12px",
+        fontSize: 10,
+        fontWeight: 800,
+        color: C.accent,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        fontFamily: body,
+      }}
+    >
+      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+        <path
+          d="M2 6l3 3 5-5"
+          stroke={C.accent}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      COMPLETED
+    </span>
+  );
+}
+
+/* ── Task Card ── */
+function TaskCard({
+  children,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+}) {
+  return (
+    <div
+      className="task-card"
+      style={{
+        animationDelay: `${delay}ms`,
+        background: "rgba(255,255,255,0.02)",
+        border: `1px solid ${C.cardBorder}`,
+        borderRadius: 16,
+        padding: "24px 26px",
+        backdropFilter: "blur(10px)",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ── Task Header ── */
+function TaskHeader({
+  num,
+  title,
+  subtitle,
+  done,
+}: {
+  num: string;
+  title: string;
+  subtitle: string;
+  done: boolean;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: done ? 0 : 18,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            background: done ? C.accentLight : "rgba(255,255,255,0.03)",
+            border: `1px solid ${done ? "rgba(212,168,83,0.3)" : "rgba(255,255,255,0.08)"}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 12,
+            fontWeight: 800,
+            color: done ? C.accent : C.textDim,
+            flexShrink: 0,
+            transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+            fontFamily: display,
+          }}
+        >
+          {done ? (
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 12 12"
+              fill="none"
+            >
+              <path
+                d="M2 6l3 3 5-5"
+                stroke={C.accent}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          ) : (
+            num
+          )}
+        </div>
+        <div>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: done ? C.accent : "#fff",
+              transition: "color 0.3s",
+              fontFamily: display,
+              letterSpacing: "0.02em",
+            }}
+          >
+            {title}
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: C.textDim,
+              marginTop: 2,
+              fontWeight: 400,
+              fontFamily: body,
+            }}
+          >
+            {subtitle}
+          </div>
+        </div>
+      </div>
+      {done && <DoneBadge />}
+    </div>
+  );
+}
+
+/* ── Whitelist Modal ── */
+function WhitelistModal({ onClose }: { onClose: () => void }) {
+  const [twitter, setTwitter] = useState("");
+  const [quoteUrl, setQuoteUrl] = useState("");
+  const [wallet, setWallet] = useState("");
+  const [tasks, setTasks] = useState<Record<string, boolean>>({});
+  const [twitterConfirmed, setTwitterConfirmed] = useState(false);
+  const [quoteConfirmed, setQuoteConfirmed] = useState(false);
+  const [walletConfirmed, setWalletConfirmed] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const c1 = twitterConfirmed && twitter.trim().length > 1;
+  const c2 = !!tasks["follow"];
+  const c3 = !!tasks["like"];
+  const c4 = quoteConfirmed && isValidUrl(quoteUrl);
+  const c5 = walletConfirmed && isValidEvm(wallet);
+  const allDone = c1 && c2 && c3 && c4 && c5;
+
+  const openAndMark = (url: string, onDone: () => void) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+    setTimeout(onDone, 1200);
+  };
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!twitter.trim()) e.twitter = "Enter your X handle.";
+    if (!c2) e.follow = "Follow @gomememes first.";
+    if (!c3) e.like = "Like and repost the pinned tweet first.";
+    if (!quoteUrl.trim()) e.quoteUrl = "Paste your quote link.";
+    else if (!isValidUrl(quoteUrl)) e.quoteUrl = "Enter a valid URL.";
+    if (!wallet.trim()) e.wallet = "Enter your EVM wallet address.";
+    else if (!isValidEvm(wallet)) e.wallet = "Invalid address — must be 0x + 40 hex chars.";
+    return e;
+  };
+
+  const handleSubmit = async () => {
+    const e = validate();
+    if (Object.keys(e).length > 0) {
+      setErrors(e);
+      return;
+    }
+    setErrors({});
+    setSubmitting(true);
     try {
       const res = await fetch(SHEET_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
-          wallet:    wallet.trim(),
-          twitter:   twitter.trim(),
+          wallet: wallet.trim(),
+          twitter: twitter.trim().replace(/^@/, ""),
           quote_url: quoteUrl.trim(),
           timestamp: new Date().toISOString(),
         }),
       });
       const json = await res.json();
       if (json.result === "success") {
-        setSuccess(true);
+        setSubmitted(true);
         localStorage.setItem("gome_submitted", "true");
-        setAlreadySubmitted(true);
       } else {
-        setErr("Something went wrong. Try again.");
+        throw new Error("Sheet error");
       }
     } catch {
-      setErr("Network error. Please try again.");
+      setErrors({ submit: "Something went wrong. Try again." });
     } finally {
-      setSending(false);
+      setSubmitting(false);
     }
-  }
-
-  function closeModal() {
-    setModalOpen(false);
-    if (!alreadySubmitted) { setSuccess(false); setErr(""); }
-  }
-
-  const inp: React.CSSProperties = {
-    width: "100%", background: "rgba(0,0,0,0.4)",
-    border: `2px solid ${accent}33`, borderRadius: "8px",
-    padding: "9px 11px", fontSize: "0.82rem", color: "#fff",
-    fontFamily: body, outline: "none", transition: "border 0.2s", boxSizing: "border-box",
   };
 
-  return (
-    <div style={{ background: "#0a0a0a", minHeight: "100vh", color: "#fff", overflowX: "hidden", fontFamily: body }}>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Bangers&display=swap');
-
-        @keyframes floatUp {
-          0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
-          10%  { opacity: 1; }
-          90%  { opacity: 0.8; }
-          100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
-        }
-        @keyframes coinBob {
-          0%,100% { transform: translateY(0) rotate(-2deg); }
-          50%     { transform: translateY(-14px) rotate(2deg); }
-        }
-        @keyframes heroFloat {
-          0%,100% { transform: translateY(0); }
-          50%     { transform: translateY(-10px); }
-        }
-        @keyframes fadeUp {
-          from { opacity:0; transform:translateY(24px); }
-          to   { opacity:1; transform:translateY(0); }
-        }
-        @keyframes modalIn {
-          from { opacity:0; transform:scale(0.95) translateY(12px); }
-          to   { opacity:1; transform:scale(1) translateY(0); }
-        }
-        @keyframes stamp {
-          0%   { transform:scale(0) rotate(-15deg); opacity:0; }
-          70%  { transform:scale(1.15) rotate(3deg); }
-          100% { transform:scale(1) rotate(0); opacity:1; }
-        }
-        @keyframes wiggle {
-          0%,100% { transform:rotate(-3deg); }
-          50%     { transform:rotate(3deg); }
-        }
-        @keyframes pulseBtn {
-          0%,100% { box-shadow:0 0 0 0 rgba(245,158,11,0.5), 0 8px 30px rgba(245,158,11,0.35); }
-          50%     { box-shadow:0 0 20px 6px rgba(245,158,11,0.3), 0 8px 30px rgba(245,158,11,0.35); }
-        }
-        * { box-sizing:border-box; }
-        ::placeholder { color:rgba(255,255,255,0.2); }
-        ::-webkit-scrollbar { width:4px; }
-        ::-webkit-scrollbar-thumb { background:rgba(245,158,11,0.3); border-radius:4px; }
-        html { scroll-behavior:smooth; }
-        a { color:inherit; text-decoration:none; }
-      `}</style>
-
-      {/* ══════════ HEADER ══════════ */}
-      <header style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
-        height: "64px", padding: "0 28px",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        background: "rgba(10,10,10,0.88)",
-        backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-      }}>
-        <a href="#home" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "1.6rem", animation: "wiggle 2s ease-in-out infinite" }}>🎭</span>
-          <span style={{ fontFamily: display, fontSize: "1.5rem", letterSpacing: "0.1em", color: "#fff" }}>GOME</span>
-        </a>
-
-        <nav style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          {(COINS.map(c => [c.name, `#${c.id}`]) as [string, string][]).map(([l, h]) => (
-            <a key={l} href={h} style={{
-              fontFamily: body, fontSize: "0.7rem", fontWeight: 700,
-              letterSpacing: "0.12em", textTransform: "uppercase",
-              color: "rgba(255,255,255,0.5)", padding: "7px 12px", borderRadius: "8px",
-              transition: "all 0.2s",
-            }}
-              onMouseEnter={e => { const el = e.currentTarget; el.style.color = "#fff"; el.style.background = "rgba(255,255,255,0.06)"; }}
-              onMouseLeave={e => { const el = e.currentTarget; el.style.color = "rgba(255,255,255,0.5)"; el.style.background = "transparent"; }}
-            >{l}</a>
-          ))}
-          <div style={{ width: "1px", height: "18px", background: "rgba(255,255,255,0.1)", margin: "0 6px" }} />
-          <button onClick={() => setModalOpen(true)} style={{
-            fontFamily: body, fontSize: "0.68rem", fontWeight: 800, letterSpacing: "0.12em",
-            textTransform: "uppercase", color: "#000", background: accent,
-            border: "none", borderRadius: "8px", padding: "8px 18px", cursor: "pointer",
-            transition: "all 0.2s",
+  if (submitted) {
+    return (
+      <div
+        className="scale-in"
+        style={{
+          background: C.card,
+          borderRadius: 20,
+          border: `1px solid ${C.cardBorder}`,
+          padding: "40px 32px",
+          textAlign: "center",
+          maxWidth: 440,
+          width: "100%",
+        }}
+      >
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: 18,
+            background: C.accentLight,
+            border: `1px solid rgba(212,168,83,0.25)`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 20px",
+            fontSize: 28,
+            fontFamily: display,
+            color: C.accent,
           }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = accentLight; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = accent; }}
-          >Apply</button>
-        </nav>
-      </header>
+        >
+          GO
+        </div>
+        <h3
+          style={{
+            fontSize: 22,
+            fontWeight: 800,
+            color: "#fff",
+            marginBottom: 8,
+            fontFamily: display,
+            letterSpacing: "0.02em",
+          }}
+        >
+          Welcome to the gallery.
+        </h3>
+        <p
+          style={{
+            fontSize: 14,
+            color: C.textMuted,
+            lineHeight: 1.7,
+            fontFamily: body,
+          }}
+        >
+          Your whitelist spot is secured. Selected wallets will be notified before
+          mint opens.
+        </p>
+      </div>
+    );
+  }
 
-      {/* ══════════ HERO ══════════ */}
-      <div id="home" style={{
-        minHeight: "100vh", display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        padding: "100px 24px 80px", textAlign: "center",
-        background: "linear-gradient(180deg,#0a0a0a 0%,#111108 100%)",
-        position: "relative", overflow: "hidden",
-      }}>
-        {/* BG noise/glow */}
-        <div style={{
-          position:"absolute", top:"40%", left:"50%", transform:"translate(-50%,-50%)",
-          width:"700px", height:"700px", borderRadius:"50%",
-          background:"radial-gradient(circle,rgba(245,158,11,0.07) 0%,transparent 68%)",
-          pointerEvents:"none",
-        }} />
+  return (
+    <div
+      className="scale-in"
+      style={{
+        background: C.card,
+        borderRadius: 20,
+        border: `1px solid ${C.cardBorder}`,
+        padding: "32px 28px",
+        maxWidth: 520,
+        width: "100%",
+        maxHeight: "85vh",
+        overflowY: "auto",
+        position: "relative",
+      }}
+    >
+      <button
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          background: "transparent",
+          border: "none",
+          color: C.textDim,
+          fontSize: 22,
+          cursor: "pointer",
+          width: 32,
+          height: 32,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 8,
+          transition: "all 0.2s",
+          fontFamily: body,
+        }}
+        onMouseEnter={(e) =>
+          (e.currentTarget.style.background = "rgba(255,255,255,0.05)")
+        }
+        onMouseLeave={(e) =>
+          (e.currentTarget.style.background = "transparent")
+        }
+      >
+        ✕
+      </button>
 
-        <div style={{ position:"relative", zIndex:1, display:"flex", flexDirection:"column", alignItems:"center" }}>
-          {/* Coin trio floating */}
-          <div style={{
-            display:"flex", gap:"16px", marginBottom:"32px",
-            animation: ready ? "fadeUp 0.7s ease 0.05s both" : "none", opacity: ready ? undefined : 0,
-          }}>
-            {COINS.map((c, i) => (
-              <div key={c.id} style={{
-                width:"80px", height:"80px", borderRadius:"16px",
-                background:`${c.accent}18`,
-                border:`2px solid ${c.accent}44`,
-                display:"flex", alignItems:"center", justifyContent:"center",
-                animation:`heroFloat ${2.5 + i * 0.5}s ease-in-out ${i * 0.3}s infinite`,
-                boxShadow:`0 8px 30px ${c.accent}22`,
-              }}>
-                <img src={c.img} alt={c.name} style={{ width:"56px", height:"56px", objectFit:"contain" }} />
-              </div>
-            ))}
+      <div style={{ textAlign: "center", marginBottom: 28 }}>
+        <p
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: C.accent,
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            marginBottom: 10,
+            fontFamily: body,
+          }}
+        >
+          Whitelist Application
+        </p>
+        <h2
+          style={{
+            fontSize: 24,
+            fontWeight: 800,
+            color: "#fff",
+            marginBottom: 6,
+            fontFamily: display,
+            letterSpacing: "0.02em",
+          }}
+        >
+          Join the Gallery
+        </h2>
+        <p
+          style={{
+            fontSize: 13,
+            color: C.textMuted,
+            lineHeight: 1.6,
+            fontFamily: body,
+          }}
+        >
+          Complete each step below. The next unlocks when you finish the last.
+        </p>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {/* Step 1 */}
+        <TaskCard delay={0}>
+          <TaskHeader
+            num="01"
+            title="Your X Handle"
+            subtitle="So we know who you are"
+            done={c1}
+          />
+          {!c1 && (
+            <Field
+              label=""
+              value={twitter}
+              onChange={(v) => {
+                setTwitter(v);
+                setErrors((e) => ({ ...e, twitter: "" }));
+              }}
+              placeholder="@yourhandle"
+              error={errors.twitter}
+              onBlur={() => {
+                if (twitter.trim()) setTwitterConfirmed(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && twitter.trim())
+                  setTwitterConfirmed(true);
+              }}
+            />
+          )}
+        </TaskCard>
+
+        {/* Step 2 */}
+        {c1 && (
+          <TaskCard delay={60}>
+            <TaskHeader
+              num="02"
+              title="Follow @gomememes"
+              subtitle="Join the crew"
+              done={c2}
+            />
+            {!c2 && (
+              <>
+                <button
+                  className="btn-task"
+                  onClick={() =>
+                    openAndMark(X_URL, () =>
+                      setTasks((p) => ({ ...p, follow: true }))
+                    )
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "12px 0",
+                    background: C.accentLight,
+                    border: `1px solid rgba(212,168,83,0.25)`,
+                    borderRadius: 10,
+                    color: C.accent,
+                    fontFamily: body,
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  Follow on X →
+                </button>
+                {errors.follow && (
+                  <p
+                    style={{
+                      color: C.error,
+                      fontSize: 12,
+                      marginTop: 8,
+                      fontFamily: body,
+                    }}
+                  >
+                    {errors.follow}
+                  </p>
+                )}
+              </>
+            )}
+          </TaskCard>
+        )}
+
+        {/* Step 3 */}
+        {c2 && (
+          <TaskCard delay={60}>
+            <TaskHeader
+              num="03"
+              title="Like & Repost"
+              subtitle="Show some love"
+              done={c3}
+            />
+            {!c3 && (
+              <>
+                <button
+                  className="btn-task"
+                  onClick={() =>
+                    openAndMark(PINNED_TWEET, () =>
+                      setTasks((p) => ({ ...p, like: true }))
+                    )
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "12px 0",
+                    marginBottom: 14,
+                    background: C.accentLight,
+                    border: `1px solid rgba(212,168,83,0.25)`,
+                    borderRadius: 10,
+                    color: C.accent,
+                    fontFamily: body,
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  View Pinned Tweet →
+                </button>
+                {errors.like && (
+                  <p
+                    style={{
+                      color: C.error,
+                      fontSize: 12,
+                      marginTop: 8,
+                      fontFamily: body,
+                    }}
+                  >
+                    {errors.like}
+                  </p>
+                )}
+              </>
+            )}
+          </TaskCard>
+        )}
+
+        {/* Step 4 */}
+        {c3 && (
+          <TaskCard delay={60}>
+            <TaskHeader
+              num="04"
+              title="Quote the Post"
+              subtitle="Spread the word"
+              done={c4}
+            />
+            <Field
+              label="Paste your quote link"
+              value={quoteUrl}
+              onChange={(v) => {
+                setQuoteUrl(v);
+                setErrors((e) => ({ ...e, quoteUrl: "" }));
+              }}
+              placeholder="https://x.com/..."
+              error={errors.quoteUrl}
+              onBlur={() => {
+                if (isValidUrl(quoteUrl)) setQuoteConfirmed(true);
+              }}
+            />
+            {!c4 && isValidUrl(quoteUrl) && (
+              <button
+                onClick={() => setQuoteConfirmed(true)}
+                style={{
+                  marginTop: 8,
+                  width: "100%",
+                  background: C.accent,
+                  color: "#000",
+                  border: "none",
+                  borderRadius: 6,
+                  padding: "7px",
+                  fontFamily: body,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                }}
+              >
+                Verify
+              </button>
+            )}
+          </TaskCard>
+        )}
+
+        {/* Step 5 */}
+        {c4 && (
+          <TaskCard delay={60}>
+            <TaskHeader
+              num="05"
+              title="Wallet Address"
+              subtitle="Where your meme lands"
+              done={c5}
+            />
+            <Field
+              label=""
+              value={wallet}
+              onChange={(v) => {
+                setWallet(v);
+                setErrors((e) => ({ ...e, wallet: "" }));
+              }}
+              placeholder="0x..."
+              error={errors.wallet}
+              onBlur={() => {
+                if (isValidEvm(wallet)) setWalletConfirmed(true);
+              }}
+            />
+            {!c5 && isValidEvm(wallet) && (
+              <button
+                onClick={() => setWalletConfirmed(true)}
+                style={{
+                  marginTop: 8,
+                  width: "100%",
+                  background: C.accent,
+                  color: "#000",
+                  border: "none",
+                  borderRadius: 6,
+                  padding: "7px",
+                  fontFamily: body,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                }}
+              >
+                Confirm Wallet
+              </button>
+            )}
+          </TaskCard>
+        )}
+
+        {/* Submit */}
+        {c4 && (
+          <div
+            className="task-card"
+            style={{ animationDelay: "80ms", marginTop: 4 }}
+          >
+            {errors.submit && (
+              <p
+                style={{
+                  color: C.error,
+                  fontSize: 13,
+                  marginBottom: 14,
+                  textAlign: "center",
+                  fontWeight: 500,
+                  fontFamily: body,
+                }}
+              >
+                {errors.submit}
+              </p>
+            )}
+            <button
+              className="btn-primary"
+              onClick={handleSubmit}
+              disabled={submitting || !allDone}
+              style={{
+                width: "100%",
+                padding: "16px",
+                background: allDone ? C.accent : "rgba(255,255,255,0.04)",
+                borderRadius: 12,
+                border: "none",
+                color: allDone ? "#000" : "rgba(255,255,255,0.18)",
+                fontFamily: body,
+                fontWeight: 800,
+                fontSize: 14,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                cursor:
+                  allDone && !submitting ? "pointer" : "not-allowed",
+                boxShadow: allDone
+                  ? "0 4px 24px rgba(212,168,83,0.25)"
+                  : "none",
+                opacity: submitting ? 0.6 : 1,
+                transition: "all 0.3s ease",
+              }}
+            >
+              {submitting
+                ? "Securing your spot..."
+                : "Secure My Spot"}
+            </button>
+            <p
+              style={{
+                textAlign: "center",
+                fontSize: 11,
+                color: C.textDim,
+                marginTop: 12,
+                fontFamily: body,
+              }}
+            >
+              Double-check your wallet before submitting.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Coin Card ── */
+function CoinCard({
+  coin,
+  index,
+}: {
+  coin: (typeof COINS)[0];
+  index: number;
+}) {
+  const { ref, visible } = useScrollReveal();
+  return (
+    <div
+      ref={ref}
+      style={{
+        background: "rgba(255,255,255,0.015)",
+        border: `1px solid ${C.cardBorder}`,
+        borderRadius: 20,
+        padding: "32px 28px",
+        textAlign: "center",
+        transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(40px)",
+        position: "relative",
+        overflow: "hidden",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = `${coin.color}33`;
+        e.currentTarget.style.transform = "translateY(-6px)";
+        e.currentTarget.style.boxShadow = `0 20px 50px ${coin.color}11`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = C.cardBorder;
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = "none";
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "200px",
+          height: "200px",
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${coin.color}10 0%, transparent 70%)`,
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          width: "160px",
+          height: "160px",
+          margin: "0 auto 24px",
+          borderRadius: "20px",
+          background: `${coin.color}10`,
+          border: `2px solid ${coin.color}30`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        <img
+          src={coin.img}
+          alt={coin.name}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            padding: "16px",
+          }}
+        />
+      </div>
+      <h3
+        style={{
+          fontFamily: display,
+          fontSize: "clamp(1.8rem, 4vw, 2.4rem)",
+          color: coin.color,
+          marginBottom: 8,
+          letterSpacing: "0.04em",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        {coin.name}
+      </h3>
+      <p
+        style={{
+          fontFamily: display,
+          fontSize: "1rem",
+          color: "#fff",
+          marginBottom: 12,
+          position: "relative",
+          zIndex: 1,
+          fontWeight: 600,
+        }}
+      >
+        {coin.tagline}
+      </p>
+      <p
+        style={{
+          fontFamily: body,
+          fontSize: "0.9rem",
+          color: C.textMuted,
+          lineHeight: 1.7,
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        {coin.desc}
+      </p>
+    </div>
+  );
+}
+
+/* ── FAQ Item ── */
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderBottom: `1px solid ${C.cardBorder}` }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: "100%",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "18px 0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+        }}
+      >
+        <span
+          style={{
+            fontFamily: body,
+            fontSize: "1rem",
+            fontWeight: 700,
+            color: open ? "#fff" : C.textMuted,
+            textAlign: "left",
+            transition: "color 0.2s",
+          }}
+        >
+          {q}
+        </span>
+        <span
+          style={{
+            color: C.accent,
+            fontSize: "1.2rem",
+            flexShrink: 0,
+            transition: "transform 0.25s",
+            transform: open ? "rotate(45deg)" : "rotate(0)",
+            fontFamily: display,
+          }}
+        >
+          +
+        </span>
+      </button>
+      {open && (
+        <p
+          style={{
+            fontFamily: body,
+            fontSize: "0.9rem",
+            color: C.textMuted,
+            padding: "0 0 18px",
+            margin: 0,
+            lineHeight: 1.7,
+            fontWeight: 400,
+          }}
+        >
+          {a}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════ MAIN ════════════════════ */
+export default function Home() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+
+  useEffect(() => {
+    if (localStorage.getItem("gome_submitted") === "true")
+      setAlreadySubmitted(true);
+
+    const l = document.createElement("link");
+    l.rel = "stylesheet";
+    l.href = FONT_LINK;
+    document.head.appendChild(l);
+
+    const onScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <div
+      style={{
+        background: C.bg,
+        minHeight: "100vh",
+        color: "#fff",
+        overflowX: "hidden",
+        fontFamily: body,
+      }}
+    >
+      <style>{globalStyles}</style>
+
+      {/* ── Navigation ── */}
+      <nav
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          background: scrolled ? "rgba(5,5,5,0.9)" : "transparent",
+          backdropFilter: scrolled ? "blur(16px)" : "none",
+          borderBottom: scrolled
+            ? `1px solid ${C.cardBorder}`
+            : "1px solid transparent",
+          padding: "0 32px",
+          height: 72,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          transition: "all 0.4s ease",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <img
+            src={LOGO}
+            alt="GOME"
+            style={{ height: 36, width: 36, objectFit: "contain" }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+          <span
+            style={{
+              fontFamily: display,
+              fontWeight: 700,
+              fontSize: 22,
+              letterSpacing: "0.08em",
+              color: "#fff",
+            }}
+          >
+            GOME
+          </span>
+        </div>
+      </nav>
+
+      {/* ── Hero ── */}
+      <section
+        style={{
+          position: "relative",
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "120px 24px 80px",
+          textAlign: "center",
+          overflow: "hidden",
+        }}
+      >
+        <ParticleCanvas />
+
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: "40%",
+            background: "linear-gradient(to top, #050505, transparent)",
+            zIndex: 2,
+            pointerEvents: "none",
+          }}
+        />
+
+        <div
+          style={{ position: "relative", zIndex: 3, maxWidth: 640 }}
+        >
+          <div
+            className="slide-up"
+            style={{
+              width: 260,
+              height: 260,
+              margin: "0 auto 32px",
+              borderRadius: 24,
+              background: `linear-gradient(135deg, rgba(107,63,160,0.15), rgba(212,168,83,0.1))`,
+              border: `1px solid rgba(255,255,255,0.06)`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              boxShadow:
+                "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(212,168,83,0.08)",
+              animationDelay: "0ms",
+            }}
+          >
+            <img
+              src={HERO_IMG}
+              alt="GOME Hero"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                borderRadius: 24,
+              }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+                const parent = (e.target as HTMLImageElement)
+                  .parentElement;
+                if (parent)
+                  parent.innerHTML =
+                    '<span style="font-family:Fredoka,sans-serif;font-size:64px;color:#D4A853;">GO</span>';
+              }}
+            />
           </div>
 
-          <div style={{ marginBottom:"16px", animation: ready ? "fadeUp 0.7s ease 0.1s both" : "none", opacity: ready ? undefined : 0 }}>
-            <span style={{
-              fontFamily:body, fontSize:"0.65rem", letterSpacing:"0.28em", textTransform:"uppercase",
-              color:accent, border:`1px solid ${accent}44`, borderRadius:"999px", padding:"5px 18px",
-            }}>
-              Gallery of Memes — 4,004 NFTs on ETH
-            </span>
+          <div
+            className="slide-up"
+            style={{ animationDelay: "150ms" }}
+          >
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: C.accent,
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+                marginBottom: 16,
+                fontFamily: body,
+              }}
+            >
+              Gallery of Memes — 12,012 NFTs on Ethereum
+            </p>
           </div>
 
-          <h1 style={{
-            fontFamily:display, fontSize:"clamp(5rem,20vw,10rem)",
-            color:"#fff", margin:"0 0 6px", letterSpacing:"0.06em", lineHeight:0.9,
-            animation: ready ? "fadeUp 0.7s ease 0.16s both" : "none", opacity: ready ? undefined : 0,
-            textShadow:`0 0 60px ${accent}33`,
-          }}>
+          <h1
+            className="slide-up"
+            style={{
+              fontFamily: display,
+              fontSize: "clamp(3.5rem, 10vw, 6rem)",
+              fontWeight: 700,
+              lineHeight: 1.05,
+              color: "#fff",
+              marginBottom: 20,
+              letterSpacing: "-0.02em",
+              animationDelay: "250ms",
+            }}
+          >
             GOME
           </h1>
 
-          <p style={{
-            fontFamily:body, fontWeight:800, fontSize:"clamp(1rem,3vw,1.3rem)",
-            color:"rgba(255,255,255,0.6)", margin:"16px 0 36px", maxWidth:"480px", lineHeight:1.5,
-            animation: ready ? "fadeUp 0.7s ease 0.22s both" : "none", opacity: ready ? undefined : 0,
-          }}>
-            The meme coins you love — now as NFTs.<br/>
-            Pepe. Bonk. Brett. 4,004 each. One collection.
+          <p
+            className="slide-up"
+            style={{
+              fontSize: 16,
+              color: C.textMuted,
+              lineHeight: 1.75,
+              maxWidth: 480,
+              margin: "0 auto 36px",
+              animationDelay: "350ms",
+              fontFamily: body,
+            }}
+          >
+            The meme coins you love — now as NFTs. Pepe, Bonk, and Brett.
+            4,004 each. One collection. Zero apologies.
           </p>
 
-          <div style={{
-            display:"flex", gap:"12px", flexWrap:"wrap", justifyContent:"center",
-            animation: ready ? "fadeUp 0.7s ease 0.28s both" : "none", opacity: ready ? undefined : 0,
-          }}>
-            <button onClick={() => setModalOpen(true)} style={{
-              fontFamily:body, fontSize:"0.78rem", fontWeight:800, letterSpacing:"0.16em",
-              textTransform:"uppercase", color:"#000", background:accent,
-              border:"none", borderRadius:"12px", padding:"16px 36px",
-              cursor:"pointer", transition:"all 0.2s",
-              animation:"pulseBtn 2.5s ease-in-out infinite",
-            }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = accentLight; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = accent; (e.currentTarget as HTMLButtonElement).style.transform = ""; }}
+          <div
+            className="slide-up"
+            style={{ animationDelay: "450ms" }}
+          >
+            <button
+              className="btn-primary"
+              onClick={() => setModalOpen(true)}
+              style={{
+                padding: "16px 48px",
+                background: C.accent,
+                borderRadius: 14,
+                border: "none",
+                color: "#000",
+                fontFamily: body,
+                fontWeight: 800,
+                fontSize: 15,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                boxShadow: "0 4px 24px rgba(212,168,83,0.25)",
+              }}
             >
-              🎟️ Apply for Whitelist
+              Apply for Whitelist
             </button>
-            <a href="#pepe" style={{
-              fontFamily:body, fontSize:"0.78rem", fontWeight:700, letterSpacing:"0.14em",
-              textTransform:"uppercase", color:"rgba(255,255,255,0.55)",
-              border:"2px solid rgba(255,255,255,0.12)", borderRadius:"12px",
-              padding:"16px 36px", display:"block", transition:"all 0.2s",
-            }}
-              onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = `${accent}55`; el.style.color = "#fff"; }}
-              onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "rgba(255,255,255,0.12)"; el.style.color = "rgba(255,255,255,0.55)"; }}
-            >
-              Explore Collection ↓
-            </a>
-          </div>
-
-          <div style={{
-            marginTop:"52px",
-            display:"flex", gap:"0",
-            border:`1px solid rgba(245,158,11,0.15)`, borderRadius:"12px",
-            overflow:"hidden", background:"rgba(255,255,255,0.02)",
-            animation: ready ? "fadeUp 0.7s ease 0.36s both" : "none", opacity: ready ? undefined : 0,
-          }}>
-            {[["🐸 PEPE","#pepe"],["🏏 BONK","#bonk"],["😎 BRETT","#brett"],["0.0009 ETH","Mint Price"]].map(([val, href], i) => (
-              href.startsWith("#") ? (
-                <a key={i} href={href} style={{
-                  padding:"16px 22px", borderLeft: i > 0 ? "1px solid rgba(245,158,11,0.1)" : "none",
-                  textAlign:"center", transition:"background 0.2s",
-                }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(245,158,11,0.05)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; }}
-                >
-                  <p style={{ margin:0, fontFamily:display, fontSize:"1.1rem", color:accent, letterSpacing:"0.04em" }}>{val}</p>
-                  <p style={{ margin:"2px 0 0", fontFamily:body, fontSize:"0.5rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(255,255,255,0.25)", fontWeight:700 }}>View</p>
-                </a>
-              ) : (
-                <div key={i} style={{
-                  padding:"16px 22px", borderLeft: i > 0 ? "1px solid rgba(245,158,11,0.1)" : "none",
-                  textAlign:"center",
-                }}>
-                  <p style={{ margin:0, fontFamily:display, fontSize:"1.1rem", color:accent, letterSpacing:"0.04em" }}>{val}</p>
-                  <p style={{ margin:"2px 0 0", fontFamily:body, fontSize:"0.5rem", letterSpacing:"0.16em", textTransform:"uppercase", color:"rgba(255,255,255,0.25)", fontWeight:700 }}>Mint Price</p>
-                </div>
-              )
-            ))}
           </div>
         </div>
 
         {/* Scroll hint */}
-        <div style={{ position:"absolute", bottom:"32px", left:"50%", transform:"translateX(-50%)", display:"flex", flexDirection:"column", alignItems:"center", gap:"6px", opacity:0.3 }}>
-          <span style={{ fontFamily:body, fontSize:"0.48rem", letterSpacing:"0.3em", textTransform:"uppercase", color:accent }}>Scroll</span>
-          <div style={{ width:"1px", height:"28px", background:`linear-gradient(180deg,${accent},transparent)` }} />
-        </div>
-      </div>
-
-      {/* ══════════ COIN SECTIONS ══════════ */}
-      {COINS.map((coin, i) => <CoinSection key={coin.id} coin={coin} index={i} />)}
-
-      {/* ══════════ WHITELIST CTA BAND ══════════ */}
-      <section id="whitelist" style={{
-        background:"linear-gradient(135deg,#1a1100 0%,#0d0d0d 50%,#1a1100 100%)",
-        padding:"100px 0", textAlign:"center", position:"relative", overflow:"hidden",
-      }}>
-        <div style={{
-          position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
-          width:"600px", height:"300px", borderRadius:"50%",
-          background:"radial-gradient(ellipse,rgba(245,158,11,0.1) 0%,transparent 70%)",
-          pointerEvents:"none",
-        }} />
-        <div style={{ maxWidth:"600px", margin:"0 auto", padding:"0 24px", position:"relative", zIndex:1 }}>
-          <div style={{ fontSize:"3rem", marginBottom:"20px", animation:"coinBob 2s ease-in-out infinite" }}>🎟️</div>
-          <h2 style={{ fontFamily:display, fontSize:"clamp(2.5rem,8vw,4.5rem)", color:"#fff", margin:"0 0 16px", letterSpacing:"0.05em" }}>
-            Get On The List
-          </h2>
-          <p style={{ fontFamily:body, fontSize:"1rem", fontWeight:600, color:"rgba(255,255,255,0.5)", margin:"0 0 36px", lineHeight:1.7, maxWidth:"440px", marginLeft:"auto", marginRight:"auto" }}>
-            Follow, like, repost — and drop your wallet.<br/>
-            Selected addresses get early access to mint.
-          </p>
-          <button onClick={() => setModalOpen(true)} style={{
-            fontFamily:body, fontSize:"0.82rem", fontWeight:800, letterSpacing:"0.16em",
-            textTransform:"uppercase", color:"#000", background:accent,
-            border:"none", borderRadius:"14px", padding:"18px 48px",
-            cursor:"pointer", transition:"all 0.2s",
-            boxShadow:`0 12px 40px ${accent}44`,
+        <div
+          className="fade-in"
+          style={{
+            position: "absolute",
+            bottom: 32,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 3,
+            animationDelay: "1s",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 8,
+            opacity: 0.4,
           }}
-            onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = accentLight; b.style.transform = "translateY(-3px)"; b.style.boxShadow = `0 20px 50px ${accent}55`; }}
-            onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = accent; b.style.transform = ""; b.style.boxShadow = `0 12px 40px ${accent}44`; }}
+        >
+          <span
+            style={{
+              fontFamily: body,
+              fontSize: 10,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: C.accent,
+              fontWeight: 700,
+            }}
           >
-            🎟️ Apply Now — It's Free
-          </button>
-          <p style={{ fontFamily:body, fontSize:"0.65rem", color:"rgba(255,255,255,0.2)", marginTop:"16px", letterSpacing:"0.08em" }}>
-            No cost to apply. Mint price 0.0009 ETH per NFT.
-          </p>
+            Scroll
+          </span>
+          <div
+            style={{
+              width: 1,
+              height: 28,
+              background: `linear-gradient(180deg, ${C.accent}, transparent)`,
+            }}
+          />
         </div>
       </section>
 
-      {/* ══════════ FAQ ══════════ */}
-      <section style={{ background:"#0a0a0a", padding:"80px 0" }}>
-        <div style={{ maxWidth:"640px", margin:"0 auto", padding:"0 24px" }}>
-          <h2 style={{ fontFamily:display, fontSize:"clamp(2rem,7vw,3.5rem)", color:"#fff", margin:"0 0 40px", letterSpacing:"0.05em", textAlign:"center" }}>
+      {/* ── The Memes ── */}
+      <section
+        style={{
+          padding: "100px 24px",
+          background: "linear-gradient(180deg, #050505 0%, #0a0a0a 50%, #050505 100%)",
+          position: "relative",
+        }}
+      >
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div
+            className="slide-up"
+            style={{ textAlign: "center", marginBottom: 60 }}
+          >
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: C.accent,
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+                marginBottom: 14,
+                fontFamily: body,
+              }}
+            >
+              The Collection
+            </p>
+            <h2
+              style={{
+                fontFamily: display,
+                fontSize: "clamp(2rem, 5vw, 3rem)",
+                fontWeight: 700,
+                color: "#fff",
+                marginBottom: 16,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Meet the{" "}
+              <span style={{ color: C.accent }}>Memes</span>
+            </h2>
+            <p
+              style={{
+                fontSize: 16,
+                color: C.textMuted,
+                lineHeight: 1.8,
+                maxWidth: 520,
+                margin: "0 auto",
+                fontFamily: body,
+              }}
+            >
+              Three legends. One gallery. Hand-crafted characters built
+              for the culture.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(300px, 1fr))",
+              gap: 20,
+            }}
+          >
+            {COINS.map((coin, i) => (
+              <CoinCard key={coin.id} coin={coin} index={i} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Mint Info ── */}
+      <section
+        style={{
+          padding: "100px 24px",
+          background: C.bg,
+          borderTop: `1px solid ${C.cardBorder}`,
+          borderBottom: `1px solid ${C.cardBorder}`,
+        }}
+      >
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          <div
+            className="slide-up"
+            style={{ textAlign: "center", marginBottom: 48 }}
+          >
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: C.accent,
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+                marginBottom: 14,
+                fontFamily: body,
+              }}
+            >
+              Mint Details
+            </p>
+            <h2
+              style={{
+                fontFamily: display,
+                fontSize: "clamp(2rem, 5vw, 3rem)",
+                fontWeight: 700,
+                color: "#fff",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              The{" "}
+              <span style={{ color: C.accent }}>Specs</span>
+            </h2>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(160px, 1fr))",
+              gap: 16,
+            }}
+          >
+            {MINT_INFO.map((item, i) => (
+              <div
+                key={i}
+                className="slide-up"
+                style={{
+                  background: "rgba(255,255,255,0.02)",
+                  border: `1px solid ${C.cardBorder}`,
+                  borderRadius: 16,
+                  padding: "28px 20px",
+                  textAlign: "center",
+                  transition: "all 0.3s ease",
+                  animationDelay: `${i * 100}ms`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor =
+                    "rgba(212,168,83,0.2)";
+                  e.currentTarget.style.transform =
+                    "translateY(-4px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = C.cardBorder;
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontFamily: display,
+                    fontSize: "1.5rem",
+                    color: C.accent,
+                    letterSpacing: "0.04em",
+                    marginBottom: 8,
+                  }}
+                >
+                  {item.value}
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontFamily: body,
+                    fontSize: "0.65rem",
+                    letterSpacing: "0.16em",
+                    textTransform: "uppercase",
+                    color: C.textDim,
+                    fontWeight: 700,
+                  }}
+                >
+                  {item.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Lore ── */}
+      <section
+        style={{
+          padding: "100px 24px",
+          background: C.bgElevated,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1000,
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 60,
+            flexWrap: "wrap",
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
+          <div
+            style={{
+              flex: "1 1 300px",
+              borderRadius: 20,
+              overflow: "hidden",
+              border: `1px solid ${C.cardBorder}`,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+            }}
+          >
+            <img
+              src={LORE_IMG}
+              alt="GOME Lore"
+              style={{
+                width: "100%",
+                height: "auto",
+                display: "block",
+              }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          </div>
+          <div style={{ flex: "1 1 400px" }}>
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: C.accent,
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+                marginBottom: 14,
+                fontFamily: body,
+              }}
+            >
+              The Lore
+            </p>
+            <h2
+              style={{
+                fontFamily: display,
+                fontSize: "clamp(2rem, 5vw, 3rem)",
+                fontWeight: 700,
+                color: "#fff",
+                marginBottom: 20,
+                letterSpacing: "-0.02em",
+                lineHeight: 1.1,
+              }}
+            >
+              From the trenches to the{" "}
+              <span style={{ color: C.accent }}>chain.</span>
+            </h2>
+            <p
+              style={{
+                fontSize: 16,
+                color: C.textMuted,
+                lineHeight: 1.8,
+                marginBottom: 16,
+                fontFamily: body,
+              }}
+            >
+              GOME started as a joke in a group chat. Three meme coins,
+              three communities, one question: what if we put them all in
+              one place?
+            </p>
+            <p
+              style={{
+                fontSize: 16,
+                color: C.textMuted,
+                lineHeight: 1.8,
+                fontFamily: body,
+              }}
+            >
+              Now it's a 12,012-piece collection on Ethereum. No roadmap
+              promises. No utility fluff. Just art, culture, and the
+              memes that got us here.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section
+        style={{
+          padding: "100px 24px",
+          textAlign: "center",
+          background: C.bg,
+          borderTop: `1px solid ${C.cardBorder}`,
+        }}
+      >
+        <div
+          className="slide-up"
+          style={{ maxWidth: 500, margin: "0 auto" }}
+        >
+          <h2
+            style={{
+              fontFamily: display,
+              fontSize: "clamp(2rem, 5vw, 3rem)",
+              fontWeight: 700,
+              color: "#fff",
+              marginBottom: 14,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Ready to join the{" "}
+            <span style={{ color: C.accent }}>gallery?</span>
+          </h2>
+          <p
+            style={{
+              fontSize: 16,
+              color: C.textMuted,
+              lineHeight: 1.7,
+              marginBottom: 28,
+              fontFamily: body,
+            }}
+          >
+            Spots are limited. Complete the whitelist missions to secure
+            your place.
+          </p>
+          <button
+            className="btn-primary"
+            onClick={() => setModalOpen(true)}
+            style={{
+              padding: "16px 48px",
+              background: C.accent,
+              borderRadius: 14,
+              border: "none",
+              color: "#000",
+              fontFamily: body,
+              fontWeight: 800,
+              fontSize: 15,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              boxShadow: "0 4px 24px rgba(212,168,83,0.25)",
+            }}
+          >
+            Join the Gallery
+          </button>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section style={{ background: C.bg, padding: "80px 24px" }}>
+        <div style={{ maxWidth: 640, margin: "0 auto" }}>
+          <h2
+            style={{
+              fontFamily: display,
+              fontSize: "clamp(2rem, 5vw, 3rem)",
+              fontWeight: 700,
+              color: "#fff",
+              marginBottom: 40,
+              letterSpacing: "-0.02em",
+              textAlign: "center",
+            }}
+          >
             FAQ
           </h2>
           {[
-            ["What is GOME?","Gallery of Memes — a 4,004 supply NFT collection featuring Pepe, Bonk, and Brett characters on Ethereum."],
-            ["What's the mint price?","0.0009 ETH per NFT."],
-            ["Where do I mint?","On OpenSea."],
-            ["What is the whitelist?","Completing the missions (follow, like, repost + wallet) enters you into review for early access."],
-            ["How many NFTs are there?","4,004 total across all three meme characters."],
-            ["Is this financial advice?","No. This is a meme NFT collection. DYOR. NFA."],
+            [
+              "What is GOME?",
+              "Gallery of Memes — a 12,012 supply NFT collection featuring Pepe, Bonk, and Brett characters on Ethereum.",
+            ],
+            [
+              "What's the mint price?",
+              "0.0009 ETH per NFT.",
+            ],
+            [
+              "Where do I mint?",
+              "On OpenSea.",
+            ],
+            [
+              "What is the whitelist?",
+              "Completing the missions (follow, like, repost, quote + wallet) enters you into review for early access.",
+            ],
+            [
+              "How many NFTs are there?",
+              "12,012 total — 4,004 for each meme character.",
+            ],
+            [
+              "Is this financial advice?",
+              "No. This is a meme NFT collection. DYOR. NFA.",
+            ],
           ].map(([q, a], i) => (
             <FaqItem key={i} q={q} a={a} />
           ))}
         </div>
       </section>
 
-      {/* ══════════ FOOTER ══════════ */}
-      <footer style={{ padding:"60px 24px 40px", textAlign:"center", background:"#060606", borderTop:"1px solid rgba(255,255,255,0.05)" }}>
-        <div style={{ fontSize:"2.5rem", marginBottom:"12px" }}>🎭</div>
-        <h3 style={{ fontFamily:display, fontSize:"2rem", color:"#fff", margin:"0 0 8px", letterSpacing:"0.1em" }}>GOME</h3>
-        <p style={{ fontFamily:body, fontSize:"0.88rem", color:"rgba(255,255,255,0.3)", margin:"0 0 28px", lineHeight:1.7 }}>
-          Gallery of Memes. 4,004 NFTs. Ethereum.<br/>
-          🐸 PEPE &nbsp;•&nbsp; 🏏 BONK &nbsp;•&nbsp; 😎 BRETT
-        </p>
-        <div style={{ display:"flex", gap:"28px", justifyContent:"center", marginBottom:"36px", flexWrap:"wrap" }}>
-          {[["X / Twitter", X_URL],["Whitelist","#whitelist"],["PEPE","#pepe"],["BONK","#bonk"],["BRETT","#brett"]].map(([l, h]) => (
-            <a key={l} href={h} target={h.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer"
-              style={{ fontFamily:body, fontSize:"0.7rem", fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:"rgba(245,158,11,0.5)", transition:"color 0.2s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
-              onMouseLeave={e => (e.currentTarget.style.color = "rgba(245,158,11,0.5)")}
-            >{l}</a>
-          ))}
+      {/* ── Footer ── */}
+      <footer
+        style={{
+          padding: "60px 24px 40px",
+          textAlign: "center",
+          background: "#060606",
+          borderTop: `1px solid ${C.cardBorder}`,
+        }}
+      >
+        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              marginBottom: 16,
+            }}
+          >
+            <img
+              src={LOGO}
+              alt="GOME"
+              style={{ height: 32, width: 32, objectFit: "contain" }}
+            />
+            <span
+              style={{
+                fontFamily: display,
+                fontWeight: 700,
+                fontSize: 20,
+                letterSpacing: "0.1em",
+                color: "#fff",
+              }}
+            >
+              GOME
+            </span>
+          </div>
+          <p
+            style={{
+              fontSize: 14,
+              color: C.textMuted,
+              marginBottom: 28,
+              fontFamily: body,
+              lineHeight: 1.7,
+            }}
+          >
+            Gallery of Memes. 12,012 NFTs. Ethereum.
+            <br />
+            PEPE · BONK · BRETT
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 28,
+              marginBottom: 36,
+              flexWrap: "wrap",
+            }}
+          >
+            {[
+              ["X / Twitter", X_URL],
+              ["Whitelist", "#home"],
+              ["PEPE", "#pepe"],
+              ["BONK", "#bonk"],
+              ["BRETT", "#brett"],
+            ].map(([l, h]) => (
+              <a
+                key={l}
+                href={h}
+                target={h.startsWith("http") ? "_blank" : undefined}
+                rel="noopener noreferrer"
+                style={{
+                  fontFamily: body,
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "rgba(212,168,83,0.5)",
+                  transition: "color 0.2s",
+                  textDecoration: "none",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.color = "#fff")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.color =
+                    "rgba(212,168,83,0.5)")
+                }
+              >
+                {l}
+              </a>
+            ))}
+          </div>
+
+          <p
+            style={{
+              fontFamily: body,
+              fontSize: 11,
+              letterSpacing: "0.24em",
+              textTransform: "uppercase",
+              color: "rgba(212,168,83,0.25)",
+            }}
+          >
+            GOME — Gallery of Memes
+          </p>
         </div>
-        <p style={{ fontFamily:body, fontSize:"0.55rem", letterSpacing:"0.24em", textTransform:"uppercase", color:"rgba(245,158,11,0.25)" }}>
-          © 2025 GOME — Gallery of Memes
-        </p>
       </footer>
 
-      {/* ══════════ WHITELIST MODAL ══════════ */}
+      {/* ── Modal ── */}
       {modalOpen && (
-        <div onClick={e => { if (e.target === e.currentTarget) closeModal(); }} style={{
-          position:"fixed", inset:0, zIndex:200,
-          background:"rgba(0,0,0,0.9)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)",
-          display:"flex", alignItems:"center", justifyContent:"center", padding:"16px",
-        }}>
-          <div style={{
-            width:"100%", maxWidth:"480px", maxHeight:"94vh", overflowY:"auto",
-            background:"#111", border:`2px solid ${accent}33`, borderRadius:"20px",
-            padding:"28px 22px 24px", animation:"modalIn 0.3s ease both", position:"relative",
-            boxShadow:`0 40px 80px rgba(0,0,0,0.9), 0 0 80px ${accent}10`,
-          }}>
-            <button onClick={closeModal} style={{
-              position:"absolute", top:"14px", right:"16px",
-              background:"none", border:"none", cursor:"pointer",
-              color:"rgba(255,255,255,0.3)", fontSize:"1.2rem", lineHeight:1,
-            }}>✕</button>
-
-            {alreadySubmitted ? (
-              <div style={{ textAlign:"center", padding:"36px 0" }}>
-                <div style={{ fontSize:"3rem", marginBottom:"16px" }}>🎟️</div>
-                <p style={{ fontFamily:body, fontSize:"0.6rem", letterSpacing:"0.24em", textTransform:"uppercase", color:accent, margin:"0 0 6px", fontWeight:700 }}>Already Applied</p>
-                <h2 style={{ fontFamily:display, fontSize:"2rem", color:"#fff", margin:"0 0 10px", letterSpacing:"0.05em" }}>You're In The Queue.</h2>
-                <p style={{ fontFamily:body, fontSize:"0.9rem", color:"rgba(255,255,255,0.4)", margin:0, lineHeight:1.6 }}>
-                  Selected wallets will be notified before mint opens.
-                </p>
-                <button onClick={closeModal} style={{
-                  marginTop:"24px", fontFamily:body, fontSize:"0.72rem", fontWeight:800,
-                  letterSpacing:"0.14em", textTransform:"uppercase", color:"#000",
-                  background:accent, border:"none", borderRadius:"10px", padding:"12px 28px", cursor:"pointer",
-                }}>Back to GOME</button>
-              </div>
-            ) : success ? (
-              <div style={{ textAlign:"center", padding:"36px 0" }}>
-                <div style={{
-                  width:"60px", height:"60px", borderRadius:"50%", background:accent,
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  margin:"0 auto 16px", animation:"stamp 0.5s cubic-bezier(0.23,1,0.32,1) both",
-                  boxShadow:`0 8px 30px ${accent}55`,
-                }}>
-                  <svg width="24" height="20" viewBox="0 0 24 20" fill="none">
-                    <path d="M2 10L8.5 17L22 2" stroke="#000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <p style={{ fontFamily:body, fontSize:"0.6rem", letterSpacing:"0.24em", textTransform:"uppercase", color:accent, margin:"0 0 6px", fontWeight:700 }}>Application Sent</p>
-                <h2 style={{ fontFamily:display, fontSize:"2rem", color:"#fff", margin:"0 0 10px", letterSpacing:"0.05em" }}>You're In.</h2>
-                <p style={{ fontFamily:body, fontSize:"0.9rem", color:"rgba(255,255,255,0.4)", margin:0, lineHeight:1.6 }}>
-                  Selected wallets get minted first. Stay tuned on X.
-                </p>
-                <button onClick={closeModal} style={{
-                  marginTop:"24px", fontFamily:body, fontSize:"0.72rem", fontWeight:800,
-                  letterSpacing:"0.14em", textTransform:"uppercase", color:"#000",
-                  background:accent, border:"none", borderRadius:"10px", padding:"12px 28px", cursor:"pointer",
-                }}>Back to GOME</button>
-              </div>
-            ) : (
-              <>
-                <div style={{ textAlign:"center", marginBottom:"22px" }}>
-                  <div style={{ fontSize:"2rem", marginBottom:"8px" }}>🎟️</div>
-                  <p style={{ fontFamily:body, fontSize:"0.58rem", letterSpacing:"0.24em", textTransform:"uppercase", color:accent, margin:"0 0 4px", fontWeight:700 }}>GOME Whitelist</p>
-                  <h2 style={{ fontFamily:display, fontSize:"1.8rem", color:"#fff", margin:"0 0 4px", letterSpacing:"0.04em" }}>Claim Your Spot</h2>
-                  <p style={{ fontFamily:body, fontSize:"0.82rem", color:"rgba(255,255,255,0.35)", margin:"0 0 14px", lineHeight:1.5 }}>
-                    Complete all 4 missions and drop your wallet.
-                  </p>
-                  {/* Progress bar */}
-                  <div style={{ height:"4px", background:"rgba(255,255,255,0.06)", borderRadius:"4px", overflow:"hidden" }}>
-                    <div style={{
-                      height:"100%", borderRadius:"4px",
-                      background:`linear-gradient(90deg,${accent},${accentLight})`,
-                      width:`${([c1,c2,c3,c4].filter(Boolean).length / 4) * 100}%`,
-                      transition:"width 0.4s ease",
-                    }} />
-                  </div>
-                  <p style={{ fontFamily:body, fontSize:"0.62rem", color:`${accent}77`, margin:"6px 0 0", fontWeight:700 }}>
-                    {[c1,c2,c3,c4].filter(Boolean).length} of 4 done
-                  </p>
-                </div>
-
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px", marginBottom:"16px" }}>
-
-                  {/* Card 1 — Follow */}
-                  <FlipCard index={0} icon="🐦" title="Follow on X" subtitle="Mission 01 / 04" done={c1} locked={false}
-                    onFlip={() => window.open(X_URL, "_blank")}>
-                    <p style={{ fontFamily:body, fontSize:"0.75rem", color:"rgba(255,255,255,0.45)", margin:"0 0 8px", lineHeight:1.5 }}>
-                      {c1 ? "✅ Following confirmed!" : "Follow @gomememes on X, then enter your handle."}
-                    </p>
-                    {!c1 && (
-                      <>
-                        <p style={{ margin:"0 0 4px", fontFamily:body, fontSize:"0.6rem", color:`${accent}88`, letterSpacing:"0.1em", textTransform:"uppercase", fontWeight:700 }}>Your X handle</p>
-                        <input type="text" placeholder="@yourhandle" value={twitter}
-                          onChange={e => setTwitter(e.target.value)}
-                          onClick={e => e.stopPropagation()} style={inp}
-                          onFocus={e => e.target.style.borderColor = `${accent}77`}
-                          onBlur={e => e.target.style.borderColor = `${accent}33`}
-                        />
-                        {!c1 && twitter.trim().length > 1 && (
-                          <button onClick={e => { e.stopPropagation(); setTwitterConfirmed(true); }}
-                            style={{ marginTop:"8px", width:"100%", background:accent, color:"#000", border:"none", borderRadius:"6px", padding:"7px", fontFamily:body, fontSize:"0.65rem", fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer" }}>
-                            Confirm
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </FlipCard>
-
-                  {/* Card 2 — Like & Retweet */}
-                  <FlipCard index={1} icon="❤️" title="Like & Retweet" subtitle="Mission 02 / 04" done={c2} locked={!c1}
-                    onFlip={() => { window.open(PINNED_TWEET, "_blank"); setTimeout(() => setTasks(p => ({ ...p, like: true })), 900); }}>
-                    <p style={{ fontFamily:body, fontSize:"0.75rem", color:"rgba(255,255,255,0.45)", margin:0, lineHeight:1.5 }}>
-                      {c2 ? "✅ Like & retweet done!" : "Like and retweet the pinned post. Opens automatically."}
-                    </p>
-                  </FlipCard>
-
-                  {/* Card 3 — Quote tweet */}
-                  <FlipCard index={2} icon="🔁" title="Quote Post" subtitle="Mission 03 / 04" done={c3} locked={!c2}
-                    onFlip={() => window.open(PINNED_TWEET, "_blank")}>
-                    {!c3 ? (
-                      <>
-                        <p style={{ fontFamily:body, fontSize:"0.75rem", color:"rgba(255,255,255,0.45)", margin:"0 0 8px", lineHeight:1.5 }}>
-                          Quote the pinned post with "GOME 🎭" and paste your link.
-                        </p>
-                        <input type="url" placeholder="https://x.com/..." value={quoteUrl}
-                          onChange={e => setQuoteUrl(e.target.value)}
-                          onClick={e => e.stopPropagation()} style={inp}
-                          onFocus={e => e.target.style.borderColor = `${accent}77`}
-                          onBlur={e => e.target.style.borderColor = `${accent}33`}
-                        />
-                        {quoteUrl && !isValidUrl(quoteUrl) && (
-                          <p style={{ fontFamily:body, fontSize:"0.6rem", color:"#ef4444", margin:"4px 0 0" }}>Needs a valid URL</p>
-                        )}
-                        {isValidUrl(quoteUrl) && (
-                          <button onClick={e => { e.stopPropagation(); setQuoteConfirmed(true); }}
-                            style={{ marginTop:"8px", width:"100%", background:accent, color:"#000", border:"none", borderRadius:"6px", padding:"7px", fontFamily:body, fontSize:"0.65rem", fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer" }}>
-                            Verify
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <p style={{ fontFamily:body, fontSize:"0.75rem", color:accent, margin:0, fontWeight:700 }}>✅ Quote verified!</p>
-                    )}
-                  </FlipCard>
-
-                  {/* Card 4 — Wallet */}
-                  <FlipCard index={3} icon="👛" title="Drop Wallet" subtitle="Mission 04 / 04" done={c4} locked={!c3}>
-                    <p style={{ margin:"0 0 6px", fontFamily:body, fontSize:"0.6rem", color:`${accent}88`, letterSpacing:"0.1em", textTransform:"uppercase", fontWeight:700 }}>EVM address</p>
-                    <input type="text" placeholder="0x..." value={wallet}
-                      onChange={e => setWallet(e.target.value)}
-                      onClick={e => e.stopPropagation()} style={inp}
-                      onFocus={e => e.target.style.borderColor = `${accent}77`}
-                      onBlur={e => e.target.style.borderColor = `${accent}33`}
-                    />
-                    {wallet && !isValidEvm(wallet) && (
-                      <p style={{ fontFamily:body, fontSize:"0.6rem", color:"#ef4444", margin:"4px 0 0" }}>Invalid EVM address</p>
-                    )}
-                    {!c4 && isValidEvm(wallet) && (
-                      <button onClick={e => { e.stopPropagation(); setWalletConfirmed(true); }}
-                        style={{ marginTop:"8px", width:"100%", background:accent, color:"#000", border:"none", borderRadius:"6px", padding:"7px", fontFamily:body, fontSize:"0.65rem", fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer" }}>
-                        Confirm Wallet
-                      </button>
-                    )}
-                    {c4 && <p style={{ fontFamily:body, fontSize:"0.7rem", color:accent, margin:"4px 0 0", fontWeight:700 }}>✅ Wallet confirmed!</p>}
-                    <p style={{ fontFamily:body, fontSize:"0.55rem", color:"rgba(255,255,255,0.15)", margin:"6px 0 0", lineHeight:1.4 }}>Never share seed phrases.</p>
-                  </FlipCard>
-
-                </div>
-
-                {err && <p style={{ fontFamily:body, fontSize:"0.78rem", color:"#ef4444", margin:"0 0 10px", fontWeight:700 }}>{err}</p>}
-
-                <button onClick={submit} disabled={sending || !allDone} style={{
-                  width:"100%",
-                  background: allDone ? accent : "rgba(255,255,255,0.04)",
-                  color: allDone ? "#000" : "rgba(255,255,255,0.18)",
-                  border: `2px solid ${allDone ? accent : "rgba(255,255,255,0.06)"}`,
-                  borderRadius:"12px", padding:"16px",
-                  fontFamily:body, fontSize:"0.78rem", fontWeight:800, letterSpacing:"0.16em", textTransform:"uppercase",
-                  cursor: allDone && !sending ? "pointer" : "not-allowed",
-                  transition:"all 0.3s ease",
-                  boxShadow: allDone ? `0 8px 30px ${accent}44` : "none",
+        <div
+          className="fade-in"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            background: "rgba(0,0,0,0.85)",
+            backdropFilter: "blur(12px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            overflowY: "auto",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setModalOpen(false);
+          }}
+        >
+          {alreadySubmitted ? (
+            <div
+              className="scale-in"
+              style={{
+                background: C.card,
+                borderRadius: 20,
+                border: `1px solid ${C.cardBorder}`,
+                padding: "40px 32px",
+                textAlign: "center",
+                maxWidth: 440,
+                width: "100%",
+              }}
+            >
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 18,
+                  background: C.accentLight,
+                  border: `1px solid rgba(212,168,83,0.25)`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 20px",
+                  fontSize: 28,
+                  fontFamily: display,
+                  color: C.accent,
                 }}
-                  onMouseEnter={e => { if (allDone) (e.currentTarget as HTMLButtonElement).style.background = accentLight; }}
-                  onMouseLeave={e => { if (allDone) (e.currentTarget as HTMLButtonElement).style.background = accent; }}
-                >
-                  {sending ? "Submitting..." : allDone ? "🎟️ Submit Application" : "Complete all missions to unlock"}
-                </button>
-              </>
-            )}
-          </div>
+              >
+                GO
+              </div>
+              <h3
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: "#fff",
+                  marginBottom: 8,
+                  fontFamily: display,
+                }}
+              >
+                Already in the gallery.
+              </h3>
+              <p
+                style={{
+                  fontSize: 14,
+                  color: C.textMuted,
+                  lineHeight: 1.7,
+                  fontFamily: body,
+                }}
+              >
+                You've already secured your whitelist spot. No need to
+                submit again.
+              </p>
+            </div>
+          ) : (
+            <WhitelistModal onClose={() => setModalOpen(false)} />
+          )}
         </div>
-      )}
-    </div>
-  );
-}
-
-/* ── FAQ item ── */
-function FaqItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ borderBottom:"1px solid rgba(255,255,255,0.07)" }}>
-      <button onClick={() => setOpen(o => !o)} style={{
-        width:"100%", background:"none", border:"none", cursor:"pointer",
-        padding:"18px 0", display:"flex", alignItems:"center", justifyContent:"space-between", gap:"12px",
-      }}>
-        <span style={{ fontFamily:"'Nunito', sans-serif", fontSize:"1rem", fontWeight:800, color: open ? "#fff" : "rgba(255,255,255,0.7)", textAlign:"left" }}>{q}</span>
-        <span style={{ color:"#f59e0b", fontSize:"1.2rem", flexShrink:0, transition:"transform 0.25s", transform: open ? "rotate(45deg)" : "rotate(0)" }}>+</span>
-      </button>
-      {open && (
-        <p style={{ fontFamily:"'Nunito', sans-serif", fontSize:"0.9rem", color:"rgba(255,255,255,0.45)", padding:"0 0 18px", margin:0, lineHeight:1.7, fontWeight:500 }}>{a}</p>
       )}
     </div>
   );
