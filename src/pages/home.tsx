@@ -74,6 +74,30 @@ function useReveal(threshold = 0.12) {
   return { ref, on };
 }
 
+/* ── Safe Image ── */
+function SafeImage({
+  src,
+  alt,
+  style,
+  fallback,
+}: {
+  src: string;
+  alt: string;
+  style?: React.CSSProperties;
+  fallback?: React.ReactNode;
+}) {
+  const [err, setErr] = useState(false);
+  if (err && fallback) return <>{fallback}</>;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      style={style}
+      onError={() => setErr(true)}
+    />
+  );
+}
+
 /* ════════════════════════════════════════
    WHITELIST — SIDEBAR STEPPER
    ════════════════════════════════════════ */
@@ -253,7 +277,12 @@ function Whitelist({ onClose }: { onClose: () => void }) {
         </p>
         {steps.map((s, i) => {
           const active = i === step;
-          const complete = i < step || (i === 0 && done.follow && twitter) || (i === 1 && done.like) || (i === 2 && isValidUrl(quoteUrl)) || (i === 3 && isValidEvm(wallet));
+          const complete =
+            i < step ||
+            (i === 0 && done.follow && twitter) ||
+            (i === 1 && done.like) ||
+            (i === 2 && isValidUrl(quoteUrl)) ||
+            (i === 3 && isValidEvm(wallet));
           return (
             <div
               key={s.id}
@@ -281,7 +310,9 @@ function Whitelist({ onClose }: { onClose: () => void }) {
                   fontFamily: display,
                   fontSize: 12,
                   fontWeight: 700,
-                  border: `2px solid ${complete ? P.gold : active ? P.gold : P.dim}`,
+                  border: `2px solid ${
+                    complete ? P.gold : active ? P.gold : P.dim
+                  }`,
                   background: complete ? P.gold : "transparent",
                   color: complete ? "#000" : active ? P.gold : P.dim,
                   transition: "all 0.3s ease",
@@ -373,8 +404,12 @@ function Whitelist({ onClose }: { onClose: () => void }) {
               style={{
                 width: "100%",
                 padding: "14px",
-                background: done.follow ? P.goldDim : "rgba(255,255,255,0.04)",
-                border: `1px solid ${done.follow ? P.gold : P.border}`,
+                background: done.follow
+                  ? P.goldDim
+                  : "rgba(255,255,255,0.04)",
+                border: `1px solid ${
+                  done.follow ? P.gold : P.border
+                }`,
                 borderRadius: 12,
                 color: done.follow ? P.gold : P.text,
                 fontFamily: body,
@@ -433,7 +468,9 @@ function Whitelist({ onClose }: { onClose: () => void }) {
                 marginTop: 12,
                 padding: "12px 28px",
                 background:
-                  done.follow && twitter.trim() ? P.gold : "rgba(255,255,255,0.04)",
+                  done.follow && twitter.trim()
+                    ? P.gold
+                    : "rgba(255,255,255,0.04)",
                 border: "none",
                 borderRadius: 10,
                 color:
@@ -484,8 +521,12 @@ function Whitelist({ onClose }: { onClose: () => void }) {
               style={{
                 width: "100%",
                 padding: "14px",
-                background: done.like ? P.goldDim : "rgba(255,255,255,0.04)",
-                border: `1px solid ${done.like ? P.gold : P.border}`,
+                background: done.like
+                  ? P.goldDim
+                  : "rgba(255,255,255,0.04)",
+                border: `1px solid ${
+                  done.like ? P.gold : P.border
+                }`,
                 borderRadius: 12,
                 color: done.like ? P.gold : P.text,
                 fontFamily: body,
@@ -529,7 +570,9 @@ function Whitelist({ onClose }: { onClose: () => void }) {
                 onClick={() => setStep(2)}
                 style={{
                   padding: "12px 28px",
-                  background: done.like ? P.gold : "rgba(255,255,255,0.04)",
+                  background: done.like
+                    ? P.gold
+                    : "rgba(255,255,255,0.04)",
                   border: "none",
                   borderRadius: 10,
                   color: done.like ? "#000" : P.dim,
@@ -754,10 +797,9 @@ function Whitelist({ onClose }: { onClose: () => void }) {
                   borderRadius: 10,
                   padding: "12px 14px",
                   color: P.text,
-                  fontFamily: body,
+                  fontFamily: "monospace",
                   fontSize: 14,
                   outline: "none",
-                  fontFamily: "monospace",
                 }}
                 onFocus={(e) =>
                   (e.currentTarget.style.borderColor = P.gold)
@@ -856,7 +898,14 @@ function CoinCard({
   coin,
   index,
 }: {
-  coin: { id: string; name: string; img: string; color: string; tagline: string; desc: string };
+  coin: {
+    id: string;
+    name: string;
+    img: string;
+    color: string;
+    tagline: string;
+    desc: string;
+  };
   index: number;
 }) {
   const { ref, on } = useReveal();
@@ -902,7 +951,7 @@ function CoinCard({
             background: `radial-gradient(circle at 50% 120%, ${coin.color}15, transparent 60%)`,
           }}
         />
-        <img
+        <SafeImage
           src={coin.img}
           alt={coin.name}
           style={{
@@ -913,6 +962,18 @@ function CoinCard({
             zIndex: 1,
             filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.5))",
           }}
+          fallback={
+            <span
+              style={{
+                fontFamily: display,
+                fontSize: 48,
+                color: coin.color,
+                opacity: 0.5,
+              }}
+            >
+              {coin.name[0]}
+            </span>
+          }
         />
       </div>
       <div style={{ padding: "28px 24px" }}>
@@ -965,6 +1026,10 @@ export default function Home() {
 
   useEffect(() => {
     if (localStorage.getItem(LS_KEY) === "1") setAlready(true);
+    const l = document.createElement("link");
+    l.rel = "stylesheet";
+    l.href = FONT_LINK;
+    document.head.appendChild(l);
     const onScroll = () => setScrolled(window.scrollY > 60);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
@@ -1053,7 +1118,7 @@ export default function Home() {
             gap: 12,
           }}
         >
-          <img
+          <SafeImage
             src={LOGO}
             alt="GOME"
             style={{
@@ -1062,9 +1127,17 @@ export default function Home() {
               objectFit: "contain",
               filter: "brightness(1.1)",
             }}
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
+            fallback={
+              <span
+                style={{
+                  fontFamily: display,
+                  fontSize: 24,
+                  color: P.gold,
+                }}
+              >
+                G
+              </span>
+            }
           />
           <span
             style={{
@@ -1119,7 +1192,6 @@ export default function Home() {
           overflow: "hidden",
         }}
       >
-        {/* Background gradient */}
         <div
           style={{
             position: "absolute",
@@ -1144,12 +1216,12 @@ export default function Home() {
             flexWrap: "wrap",
           }}
         >
-          {/* Text */}
           <div
             style={{
               flex: "1 1 400px",
               paddingBottom: 60,
-              animation: "slideUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.1s both",
+              animation:
+                "slideUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.1s both",
             }}
           >
             <p
@@ -1193,7 +1265,9 @@ export default function Home() {
               PEPE, BONK, and BRETT — hand-crafted characters built for the
               culture. One collection. Ethereum. Zero apologies.
             </p>
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            <div
+              style={{ display: "flex", gap: 14, flexWrap: "wrap" }}
+            >
               <button
                 onClick={() => setModalOpen(true)}
                 style={{
@@ -1213,13 +1287,17 @@ export default function Home() {
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "#e0c160";
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                  e.currentTarget.style.boxShadow = `0 8px 32px ${P.goldGlow}`;
+                  e.currentTarget.style.transform =
+                    "translateY(-2px)";
+                  e.currentTarget.style.boxShadow =
+                    "0 8px 32px rgba(201,168,76,0.25)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = P.gold;
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = `0 4px 24px ${P.goldGlow}`;
+                  e.currentTarget.style.transform =
+                    "translateY(0)";
+                  e.currentTarget.style.boxShadow =
+                    "0 4px 24px rgba(201,168,76,0.15)";
                 }}
               >
                 Apply for Whitelist
@@ -1254,7 +1332,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Hero Image — standalone, no box */}
           <div
             style={{
               flex: "1 1 400px",
@@ -1266,7 +1343,7 @@ export default function Home() {
                 "heroImg 1s cubic-bezier(0.16,1,0.3,1) 0.3s both",
             }}
           >
-            <img
+            <SafeImage
               src={HERO_IMG}
               alt="GOME Hero"
               style={{
@@ -1277,9 +1354,30 @@ export default function Home() {
                 filter: "drop-shadow(0 40px 60px rgba(0,0,0,0.6))",
                 display: "block",
               }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
+              fallback={
+                <div
+                  style={{
+                    width: 300,
+                    height: 300,
+                    borderRadius: 20,
+                    background: P.surface,
+                    border: `1px solid ${P.border}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: display,
+                      fontSize: 64,
+                      color: P.gold,
+                    }}
+                  >
+                    GO
+                  </span>
+                </div>
+              }
             />
           </div>
         </div>
@@ -1427,7 +1525,8 @@ export default function Home() {
                   transition: "background 0.2s",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                  e.currentTarget.style.background =
+                    "rgba(255,255,255,0.03)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = P.surface;
@@ -1554,7 +1653,7 @@ export default function Home() {
               minHeight: "60vh",
             }}
           >
-            <img
+            <SafeImage
               src={LORE_IMG}
               alt="GOME Lore"
               style={{
@@ -1569,9 +1668,15 @@ export default function Home() {
                 WebkitMaskImage:
                   "linear-gradient(to right, transparent, black 20%)",
               }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
+              fallback={
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: P.surface,
+                  }}
+                />
+              }
             />
           </div>
         </div>
@@ -1654,12 +1759,14 @@ export default function Home() {
             onMouseEnter={(e) => {
               e.currentTarget.style.background = "#e0c160";
               e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = `0 8px 32px ${P.goldGlow}`;
+              e.currentTarget.style.boxShadow =
+                "0 8px 32px rgba(201,168,76,0.25)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = P.gold;
               e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = `0 4px 24px ${P.goldGlow}`;
+              e.currentTarget.style.boxShadow =
+                "0 4px 24px rgba(201,168,76,0.15)";
             }}
           >
             Join the Gallery
@@ -1733,10 +1840,25 @@ export default function Home() {
               marginBottom: 16,
             }}
           >
-            <img
+            <SafeImage
               src={LOGO}
               alt="GOME"
-              style={{ height: 30, width: 30, objectFit: "contain" }}
+              style={{
+                height: 30,
+                width: 30,
+                objectFit: "contain",
+              }}
+              fallback={
+                <span
+                  style={{
+                    fontFamily: display,
+                    fontSize: 20,
+                    color: P.gold,
+                  }}
+                >
+                  G
+                </span>
+              }
             />
             <span
               style={{
