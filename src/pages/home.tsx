@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-/* ── Backend ── */
-const SHEET_URL = import.meta.env.VITE_SHEET_URL ?? "";
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 /* ── Assets ── */
 const LOGO = "/GOME-LOGO.png";
@@ -14,1028 +17,831 @@ const PINNED_TWEET = "https://x.com/gomememes/status/1234567890";
 
 /* ── Fonts ── */
 const FONT_LINK =
-  "https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap";
+  "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Fredoka:wght@400;500;600;700&display=swap";
 
 const display = "'Fredoka', sans-serif";
-const body = "'Inter', 'Segoe UI', Arial, sans-serif";
+const body = "'Space Grotesk', 'Segoe UI', sans-serif";
 
 /* ── Palette ── */
-const C = {
-  bg: "#050505",
-  bgElevated: "#0a0a0a",
-  card: "#111111",
-  cardBorder: "rgba(255,255,255,0.06)",
-  accent: "#D4A853",
-  accentLight: "rgba(212,168,83,0.12)",
-  accentGlow: "rgba(212,168,83,0.25)",
-  text: "#ffffff",
-  textMuted: "rgba(255,255,255,0.5)",
-  textDim: "rgba(255,255,255,0.2)",
-  success: "#22c55e",
-  error: "#ef4444",
+const P = {
+  bg: "#070707",
+  bgElevated: "#0e0e0e",
+  surface: "#141414",
+  border: "rgba(255,255,255,0.06)",
+  gold: "#C9A84C",
+  goldDim: "rgba(201,168,76,0.15)",
+  goldGlow: "rgba(201,168,76,0.25)",
+  text: "#f5f5f5",
+  muted: "rgba(255,255,255,0.4)",
+  dim: "rgba(255,255,255,0.15)",
   pepe: "#3ddc52",
   bonk: "#f97316",
   brett: "#3b82f6",
+  error: "#ef4444",
 };
 
-/* ── Coin Data ── */
-const COINS = [
-  {
-    id: "pepe",
-    name: "PEPE",
-    img: "/PEPE.PNG",
-    color: "#3ddc52",
-    tagline: "The original meme. The eternal vibe.",
-    desc: "PEPE is the face of internet culture. 4,004 unique characters, each rarer than the next. No two frens alike.",
-  },
-  {
-    id: "bonk",
-    name: "BONK",
-    img: "/BONK.PNG",
-    color: "#f97316",
-    tagline: "Bonk first. Ask questions never.",
-    desc: "BONK energy is raw, chaotic, and unstoppable. 4,004 characters armed and ready. High energy. Maximum chaos.",
-  },
-  {
-    id: "brett",
-    name: "BRETT",
-    img: "/BRETT.PNG",
-    color: "#3b82f6",
-    tagline: "Just a guy. With all the vibes.",
-    desc: "Brett doesn't try hard. Brett just exists. 4,004 editions, each one chillin harder than the last. The king of Base.",
-  },
-];
+const LS_KEY = "gome_whitelist_done";
 
-const MINT_INFO = [
-  { label: "Total Supply", value: "12,012" },
-  { label: "Mint Price", value: "0.0009 ETH" },
-  { label: "Blockchain", value: "Ethereum" },
-  { label: "Marketplace", value: "OpenSea" },
-  { label: "Launch", value: "TBA" },
-];
-
-/* ── Helpers ── */
-function isValidEvm(a: string) {
-  return /^0x[0-9a-fA-F]{40}$/.test(a.trim());
-}
-function isValidUrl(u: string) {
+/* ── Validation ── */
+const isValidEvm = (a: string) => /^0x[0-9a-fA-F]{40}$/.test(a.trim());
+const isValidUrl = (u: string) => {
   try {
-    const url = new URL(u.trim());
-    return url.protocol === "https:" || url.protocol === "http:";
+    return new URL(u.trim()).protocol === "https:";
   } catch {
     return false;
   }
-}
+};
 
 /* ── Scroll Reveal ── */
-function useScrollReveal(threshold = 0.1) {
+function useReveal(threshold = 0.12) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [on, setOn] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
+    const o = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) {
-          setVisible(true);
-          obs.unobserve(el);
+          setOn(true);
+          o.unobserve(el);
         }
       },
       { threshold }
     );
-    obs.observe(el);
-    return () => obs.disconnect();
+    o.observe(el);
+    return () => o.disconnect();
   }, [threshold]);
-  return { ref, visible };
+  return { ref, on };
 }
 
-/* ── Particle Canvas ── */
-function ParticleCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let w = (canvas.width = window.innerWidth);
-    let h = (canvas.height = window.innerHeight);
-    let animId: number;
-
-    interface Particle {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      size: number;
-      alpha: number;
-      color: string;
-    }
-
-    const particles: Particle[] = [];
-    const count = Math.min(80, Math.floor((w * h) / 15000));
-
-    for (let i = 0; i < count; i++) {
-      const isGold = Math.random() > 0.6;
-      particles.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        size: Math.random() * 2 + 0.5,
-        alpha: Math.random() * 0.5 + 0.1,
-        color: isGold ? C.accent : Math.random() > 0.5 ? "#6B3FA0" : "#ffffff",
-      });
-    }
-
-    function draw() {
-      ctx!.clearRect(0, 0, w, h);
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0) p.x = w;
-        if (p.x > w) p.x = 0;
-        if (p.y < 0) p.y = h;
-        if (p.y > h) p.y = 0;
-
-        ctx!.beginPath();
-        ctx!.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx!.fillStyle = p.color;
-        ctx!.globalAlpha = p.alpha;
-        ctx!.fill();
-      }
-      ctx!.globalAlpha = 1;
-
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120) {
-            ctx!.beginPath();
-            ctx!.moveTo(particles[i].x, particles[i].y);
-            ctx!.lineTo(particles[j].x, particles[j].y);
-            ctx!.strokeStyle = "rgba(212,168,83,0.08)";
-            ctx!.lineWidth = 0.5;
-            ctx!.stroke();
-          }
-        }
-      }
-
-      animId = requestAnimationFrame(draw);
-    }
-
-    draw();
-
-    const handleResize = () => {
-      w = canvas.width = window.innerWidth;
-      h = canvas.height = window.innerHeight;
-    };
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        pointerEvents: "none",
-        zIndex: 1,
-      }}
-    />
-  );
-}
-
-/* ── Global Styles ── */
-const globalStyles = `
-  @import url('${FONT_LINK}');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body { background: ${C.bg}; }
-  ::selection { background: ${C.accent}; color: #000; }
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: ${C.bg}; }
-  ::-webkit-scrollbar-thumb { background: rgba(212,168,83,0.25); border-radius: 10px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(212,168,83,0.4); }
-
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  @keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to   { opacity: 1; transform: scale(1); }
-  }
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-  @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 20px rgba(212,168,83,0.15); }
-    50% { box-shadow: 0 0 40px rgba(212,168,83,0.3); }
-  }
-
-  .slide-up { animation: slideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
-  .fade-in { animation: fadeIn 0.6s ease both; }
-  .scale-in { animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
-
-  input:focus, textarea:focus {
-    outline: none;
-    border-color: ${C.accent} !important;
-    box-shadow: 0 0 0 3px rgba(212,168,83,0.1) !important;
-  }
-
-  .btn-primary {
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    position: relative;
-    overflow: hidden;
-  }
-  .btn-primary::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-    background-size: 200% 100%;
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  .btn-primary:hover::after {
-    opacity: 1;
-    animation: shimmer 1.5s infinite;
-  }
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(212,168,83,0.3);
-  }
-
-  .btn-task {
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .btn-task:hover {
-    background: rgba(212,168,83,0.15) !important;
-    border-color: ${C.accent} !important;
-    transform: translateY(-1px);
-  }
-
-  .task-card {
-    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-`;
-
-/* ── Field ── */
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  error,
-  as = "input",
-  rows = 3,
-  onBlur,
-  onKeyDown,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  error?: string;
-  as?: "input" | "textarea";
-  rows?: number;
-  onBlur?: () => void;
-  onKeyDown?: (e: React.KeyboardEvent) => void;
-}) {
-  const shared: React.CSSProperties = {
-    width: "100%",
-    background: "rgba(255,255,255,0.03)",
-    border: `1px solid ${error ? C.error : "rgba(255,255,255,0.08)"}`,
-    borderRadius: 10,
-    color: "#fff",
-    fontSize: 14,
-    padding: "13px 16px",
-    fontFamily: body,
-    resize: "none",
-    display: "block",
-    transition: "border-color 0.2s, box-shadow 0.2s",
-  };
-
-  return (
-    <div style={{ marginBottom: 4 }}>
-      <label
-        style={{
-          display: "block",
-          fontSize: 11,
-          fontWeight: 700,
-          color: C.textMuted,
-          marginBottom: 8,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          fontFamily: body,
-        }}
-      >
-        {label}
-      </label>
-      {as === "textarea" ? (
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          rows={rows}
-          style={shared}
-          onBlur={onBlur}
-          onKeyDown={onKeyDown}
-        />
-      ) : (
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          style={shared}
-          onBlur={onBlur}
-          onKeyDown={onKeyDown}
-        />
-      )}
-      {error && (
-        <p
-          style={{
-            color: C.error,
-            fontSize: 12,
-            marginTop: 6,
-            fontWeight: 500,
-            fontFamily: body,
-          }}
-        >
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/* ── Done Badge ── */
-function DoneBadge() {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        background: C.accentLight,
-        border: `1px solid rgba(212,168,83,0.25)`,
-        borderRadius: 8,
-        padding: "5px 12px",
-        fontSize: 10,
-        fontWeight: 800,
-        color: C.accent,
-        letterSpacing: "0.1em",
-        textTransform: "uppercase",
-        fontFamily: body,
-      }}
-    >
-      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-        <path
-          d="M2 6l3 3 5-5"
-          stroke={C.accent}
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      COMPLETED
-    </span>
-  );
-}
-
-/* ── Task Card ── */
-function TaskCard({
-  children,
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  delay?: number;
-}) {
-  return (
-    <div
-      className="task-card"
-      style={{
-        animationDelay: `${delay}ms`,
-        background: "rgba(255,255,255,0.02)",
-        border: `1px solid ${C.cardBorder}`,
-        borderRadius: 16,
-        padding: "24px 26px",
-        backdropFilter: "blur(10px)",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-/* ── Task Header ── */
-function TaskHeader({
-  num,
-  title,
-  subtitle,
-  done,
-}: {
-  num: string;
-  title: string;
-  subtitle: string;
-  done: boolean;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: done ? 0 : 18,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            background: done ? C.accentLight : "rgba(255,255,255,0.03)",
-            border: `1px solid ${done ? "rgba(212,168,83,0.3)" : "rgba(255,255,255,0.08)"}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 12,
-            fontWeight: 800,
-            color: done ? C.accent : C.textDim,
-            flexShrink: 0,
-            transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
-            fontFamily: display,
-          }}
-        >
-          {done ? (
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 12 12"
-              fill="none"
-            >
-              <path
-                d="M2 6l3 3 5-5"
-                stroke={C.accent}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          ) : (
-            num
-          )}
-        </div>
-        <div>
-          <div
-            style={{
-              fontSize: 15,
-              fontWeight: 700,
-              color: done ? C.accent : "#fff",
-              transition: "color 0.3s",
-              fontFamily: display,
-              letterSpacing: "0.02em",
-            }}
-          >
-            {title}
-          </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: C.textDim,
-              marginTop: 2,
-              fontWeight: 400,
-              fontFamily: body,
-            }}
-          >
-            {subtitle}
-          </div>
-        </div>
-      </div>
-      {done && <DoneBadge />}
-    </div>
-  );
-}
-
-/* ── Whitelist Modal ── */
-function WhitelistModal({ onClose }: { onClose: () => void }) {
+/* ════════════════════════════════════════
+   WHITELIST — SIDEBAR STEPPER
+   ════════════════════════════════════════ */
+function Whitelist({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState(0);
   const [twitter, setTwitter] = useState("");
   const [quoteUrl, setQuoteUrl] = useState("");
   const [wallet, setWallet] = useState("");
-  const [tasks, setTasks] = useState<Record<string, boolean>>({});
-  const [twitterConfirmed, setTwitterConfirmed] = useState(false);
-  const [quoteConfirmed, setQuoteConfirmed] = useState(false);
-  const [walletConfirmed, setWalletConfirmed] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [done, setDone] = useState<Record<string, boolean>>({});
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [finished, setFinished] = useState(false);
 
-  const c1 = twitterConfirmed && twitter.trim().length > 1;
-  const c2 = !!tasks["follow"];
-  const c3 = !!tasks["like"];
-  const c4 = quoteConfirmed && isValidUrl(quoteUrl);
-  const c5 = walletConfirmed && isValidEvm(wallet);
-  const allDone = c1 && c2 && c3 && c4 && c5;
+  const steps = [
+    { id: "follow", label: "Follow", sub: "@gomememes" },
+    { id: "like", label: "Like & Repost", sub: "Pinned tweet" },
+    { id: "quote", label: "Quote", sub: "Paste link" },
+    { id: "wallet", label: "Wallet", sub: "EVM address" },
+  ];
 
-  const openAndMark = (url: string, onDone: () => void) => {
+  const go = (url: string, key: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
-    setTimeout(onDone, 1200);
+    setTimeout(() => setDone((p) => ({ ...p, [key]: true })), 1000);
   };
 
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!twitter.trim()) e.twitter = "Enter your X handle.";
-    if (!c2) e.follow = "Follow @gomememes first.";
-    if (!c3) e.like = "Like and repost the pinned tweet first.";
-    if (!quoteUrl.trim()) e.quoteUrl = "Paste your quote link.";
-    else if (!isValidUrl(quoteUrl)) e.quoteUrl = "Enter a valid URL.";
-    if (!wallet.trim()) e.wallet = "Enter your EVM wallet address.";
-    else if (!isValidEvm(wallet)) e.wallet = "Invalid address — must be 0x + 40 hex chars.";
-    return e;
+  const canAdvance = () => {
+    if (step === 0) return done.follow && twitter.trim().length > 1;
+    if (step === 1) return done.like;
+    if (step === 2) return isValidUrl(quoteUrl);
+    if (step === 3) return isValidEvm(wallet);
+    return false;
   };
 
-  const handleSubmit = async () => {
-    const e = validate();
-    if (Object.keys(e).length > 0) {
-      setErrors(e);
-      return;
-    }
-    setErrors({});
-    setSubmitting(true);
+  const submit = async () => {
+    if (!canAdvance()) return;
+    setErr("");
+    setBusy(true);
     try {
-      const res = await fetch(SHEET_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({
-          wallet: wallet.trim(),
-          twitter: twitter.trim().replace(/^@/, ""),
-          quote_url: quoteUrl.trim(),
-          timestamp: new Date().toISOString(),
-        }),
+      const { error } = await supabase.from("gome").insert({
+        x_username: twitter.trim().replace(/^@/, ""),
+        wallet: wallet.trim().toLowerCase(),
+        quote_url: quoteUrl.trim(),
+        follow_done: done.follow,
+        like_done: done.like,
       });
-      const json = await res.json();
-      if (json.result === "success") {
-        setSubmitted(true);
-        localStorage.setItem("gome_submitted", "true");
-      } else {
-        throw new Error("Sheet error");
-      }
-    } catch {
-      setErrors({ submit: "Something went wrong. Try again." });
+      if (error) throw error;
+      localStorage.setItem(LS_KEY, "1");
+      setFinished(true);
+    } catch (e: any) {
+      const msg = e?.message || "";
+      if (msg.includes("gome_wallet_idx"))
+        setErr("This wallet is already on the list.");
+      else if (msg.includes("gome_x_username_idx"))
+        setErr("This X handle is already on the list.");
+      else setErr(msg || "Submission failed. Try again.");
     } finally {
-      setSubmitting(false);
+      setBusy(false);
     }
   };
 
-  if (submitted) {
+  if (finished) {
     return (
       <div
-        className="scale-in"
         style={{
-          background: C.card,
-          borderRadius: 20,
-          border: `1px solid ${C.cardBorder}`,
-          padding: "40px 32px",
-          textAlign: "center",
-          maxWidth: 440,
           width: "100%",
+          maxWidth: 520,
+          textAlign: "center",
+          animation: "fadeIn 0.5s ease",
         }}
       >
         <div
           style={{
-            width: 64,
-            height: 64,
-            borderRadius: 18,
-            background: C.accentLight,
-            border: `1px solid rgba(212,168,83,0.25)`,
+            width: 80,
+            height: 80,
+            borderRadius: "50%",
+            background: `conic-gradient(${P.gold} 0%, ${P.goldDim} 100%)`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            margin: "0 auto 20px",
-            fontSize: 28,
-            fontFamily: display,
-            color: C.accent,
+            margin: "0 auto 24px",
           }}
         >
-          GO
+          <svg width="32" height="24" viewBox="0 0 24 18" fill="none">
+            <path
+              d="M2 9l7 7 13-13"
+              stroke="#070707"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
         <h3
           style={{
-            fontSize: 22,
-            fontWeight: 800,
-            color: "#fff",
-            marginBottom: 8,
             fontFamily: display,
-            letterSpacing: "0.02em",
+            fontSize: 28,
+            color: P.text,
+            marginBottom: 8,
+            fontWeight: 600,
           }}
         >
-          Welcome to the gallery.
+          You're in.
         </h3>
         <p
           style={{
-            fontSize: 14,
-            color: C.textMuted,
-            lineHeight: 1.7,
             fontFamily: body,
+            fontSize: 14,
+            color: P.muted,
+            lineHeight: 1.7,
+            marginBottom: 28,
           }}
         >
-          Your whitelist spot is secured. Selected wallets will be notified before
+          Whitelist spot secured. Selected wallets will be notified before
           mint opens.
         </p>
+        <button
+          onClick={onClose}
+          style={{
+            fontFamily: body,
+            fontWeight: 700,
+            fontSize: 13,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#000",
+            background: P.gold,
+            border: "none",
+            borderRadius: 10,
+            padding: "14px 32px",
+            cursor: "pointer",
+          }}
+        >
+          Back to Gallery
+        </button>
       </div>
     );
   }
 
   return (
     <div
-      className="scale-in"
       style={{
-        background: C.card,
-        borderRadius: 20,
-        border: `1px solid ${C.cardBorder}`,
-        padding: "32px 28px",
-        maxWidth: 520,
+        display: "flex",
+        gap: 0,
         width: "100%",
-        maxHeight: "85vh",
-        overflowY: "auto",
-        position: "relative",
+        maxWidth: 720,
+        maxHeight: "90vh",
+        background: P.surface,
+        borderRadius: 24,
+        border: `1px solid ${P.border}`,
+        overflow: "hidden",
+        animation: "scaleIn 0.35s cubic-bezier(0.16,1,0.3,1)",
       }}
     >
-      <button
-        onClick={onClose}
+      {/* Sidebar */}
+      <div
         style={{
-          position: "absolute",
-          top: 16,
-          right: 16,
-          background: "transparent",
-          border: "none",
-          color: C.textDim,
-          fontSize: 22,
-          cursor: "pointer",
-          width: 32,
-          height: 32,
+          width: 220,
+          background: "rgba(0,0,0,0.35)",
+          padding: "36px 28px",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: 8,
-          transition: "all 0.2s",
-          fontFamily: body,
+          flexDirection: "column",
+          gap: 4,
+          flexShrink: 0,
         }}
-        onMouseEnter={(e) =>
-          (e.currentTarget.style.background = "rgba(255,255,255,0.05)")
-        }
-        onMouseLeave={(e) =>
-          (e.currentTarget.style.background = "transparent")
-        }
       >
-        ✕
-      </button>
-
-      <div style={{ textAlign: "center", marginBottom: 28 }}>
         <p
           style={{
-            fontSize: 11,
+            fontFamily: body,
+            fontSize: 10,
             fontWeight: 700,
-            color: C.accent,
-            letterSpacing: "0.15em",
+            letterSpacing: "0.2em",
             textTransform: "uppercase",
-            marginBottom: 10,
-            fontFamily: body,
+            color: P.gold,
+            marginBottom: 28,
           }}
         >
-          Whitelist Application
+          Whitelist
         </p>
-        <h2
-          style={{
-            fontSize: 24,
-            fontWeight: 800,
-            color: "#fff",
-            marginBottom: 6,
-            fontFamily: display,
-            letterSpacing: "0.02em",
-          }}
-        >
-          Join the Gallery
-        </h2>
-        <p
-          style={{
-            fontSize: 13,
-            color: C.textMuted,
-            lineHeight: 1.6,
-            fontFamily: body,
-          }}
-        >
-          Complete each step below. The next unlocks when you finish the last.
-        </p>
+        {steps.map((s, i) => {
+          const active = i === step;
+          const complete = i < step || (i === 0 && done.follow && twitter) || (i === 1 && done.like) || (i === 2 && isValidUrl(quoteUrl)) || (i === 3 && isValidEvm(wallet));
+          return (
+            <div
+              key={s.id}
+              onClick={() => {
+                if (complete || i === step) setStep(i);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                padding: "14px 0",
+                cursor: complete || i === step ? "pointer" : "default",
+                opacity: i > step && !complete ? 0.35 : 1,
+                transition: "opacity 0.2s",
+              }}
+            >
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: display,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  border: `2px solid ${complete ? P.gold : active ? P.gold : P.dim}`,
+                  background: complete ? P.gold : "transparent",
+                  color: complete ? "#000" : active ? P.gold : P.dim,
+                  transition: "all 0.3s ease",
+                  flexShrink: 0,
+                }}
+              >
+                {complete ? (
+                  <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+                    <path
+                      d="M1 4.5l3.5 3.5 6-7"
+                      stroke="#000"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  i + 1
+                )}
+              </div>
+              <div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontFamily: display,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: active ? P.text : P.muted,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {s.label}
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontFamily: body,
+                    fontSize: 11,
+                    color: P.dim,
+                    fontWeight: 500,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {s.sub}
+                </p>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {/* Step 1 */}
-        <TaskCard delay={0}>
-          <TaskHeader
-            num="01"
-            title="Your X Handle"
-            subtitle="So we know who you are"
-            done={c1}
-          />
-          {!c1 && (
-            <Field
-              label=""
-              value={twitter}
-              onChange={(v) => {
-                setTwitter(v);
-                setErrors((e) => ({ ...e, twitter: "" }));
+      {/* Content */}
+      <div
+        style={{
+          flex: 1,
+          padding: "40px 36px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          overflowY: "auto",
+        }}
+      >
+        {step === 0 && (
+          <div style={{ animation: "fadeIn 0.3s ease" }}>
+            <h4
+              style={{
+                fontFamily: display,
+                fontSize: 22,
+                color: P.text,
+                marginBottom: 8,
+                fontWeight: 600,
               }}
-              placeholder="@yourhandle"
-              error={errors.twitter}
-              onBlur={() => {
-                if (twitter.trim()) setTwitterConfirmed(true);
+            >
+              Follow @gomememes
+            </h4>
+            <p
+              style={{
+                fontFamily: body,
+                fontSize: 14,
+                color: P.muted,
+                marginBottom: 28,
+                lineHeight: 1.6,
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && twitter.trim())
-                  setTwitterConfirmed(true);
-              }}
-            />
-          )}
-        </TaskCard>
-
-        {/* Step 2 */}
-        {c1 && (
-          <TaskCard delay={60}>
-            <TaskHeader
-              num="02"
-              title="Follow @gomememes"
-              subtitle="Join the crew"
-              done={c2}
-            />
-            {!c2 && (
-              <>
-                <button
-                  className="btn-task"
-                  onClick={() =>
-                    openAndMark(X_URL, () =>
-                      setTasks((p) => ({ ...p, follow: true }))
-                    )
-                  }
-                  style={{
-                    width: "100%",
-                    padding: "12px 0",
-                    background: C.accentLight,
-                    border: `1px solid rgba(212,168,83,0.25)`,
-                    borderRadius: 10,
-                    color: C.accent,
-                    fontFamily: body,
-                    fontWeight: 700,
-                    fontSize: 13,
-                    cursor: "pointer",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  Follow on X →
-                </button>
-                {errors.follow && (
-                  <p
-                    style={{
-                      color: C.error,
-                      fontSize: 12,
-                      marginTop: 8,
-                      fontFamily: body,
-                    }}
-                  >
-                    {errors.follow}
-                  </p>
-                )}
-              </>
-            )}
-          </TaskCard>
-        )}
-
-        {/* Step 3 */}
-        {c2 && (
-          <TaskCard delay={60}>
-            <TaskHeader
-              num="03"
-              title="Like & Repost"
-              subtitle="Show some love"
-              done={c3}
-            />
-            {!c3 && (
-              <>
-                <button
-                  className="btn-task"
-                  onClick={() =>
-                    openAndMark(PINNED_TWEET, () =>
-                      setTasks((p) => ({ ...p, like: true }))
-                    )
-                  }
-                  style={{
-                    width: "100%",
-                    padding: "12px 0",
-                    marginBottom: 14,
-                    background: C.accentLight,
-                    border: `1px solid rgba(212,168,83,0.25)`,
-                    borderRadius: 10,
-                    color: C.accent,
-                    fontFamily: body,
-                    fontWeight: 700,
-                    fontSize: 13,
-                    cursor: "pointer",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  View Pinned Tweet →
-                </button>
-                {errors.like && (
-                  <p
-                    style={{
-                      color: C.error,
-                      fontSize: 12,
-                      marginTop: 8,
-                      fontFamily: body,
-                    }}
-                  >
-                    {errors.like}
-                  </p>
-                )}
-              </>
-            )}
-          </TaskCard>
-        )}
-
-        {/* Step 4 */}
-        {c3 && (
-          <TaskCard delay={60}>
-            <TaskHeader
-              num="04"
-              title="Quote the Post"
-              subtitle="Spread the word"
-              done={c4}
-            />
-            <Field
-              label="Paste your quote link"
-              value={quoteUrl}
-              onChange={(v) => {
-                setQuoteUrl(v);
-                setErrors((e) => ({ ...e, quoteUrl: "" }));
-              }}
-              placeholder="https://x.com/..."
-              error={errors.quoteUrl}
-              onBlur={() => {
-                if (isValidUrl(quoteUrl)) setQuoteConfirmed(true);
-              }}
-            />
-            {!c4 && isValidUrl(quoteUrl) && (
-              <button
-                onClick={() => setQuoteConfirmed(true)}
-                style={{
-                  marginTop: 8,
-                  width: "100%",
-                  background: C.accent,
-                  color: "#000",
-                  border: "none",
-                  borderRadius: 6,
-                  padding: "7px",
-                  fontFamily: body,
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  cursor: "pointer",
-                }}
-              >
-                Verify
-              </button>
-            )}
-          </TaskCard>
-        )}
-
-        {/* Step 5 */}
-        {c4 && (
-          <TaskCard delay={60}>
-            <TaskHeader
-              num="05"
-              title="Wallet Address"
-              subtitle="Where your meme lands"
-              done={c5}
-            />
-            <Field
-              label=""
-              value={wallet}
-              onChange={(v) => {
-                setWallet(v);
-                setErrors((e) => ({ ...e, wallet: "" }));
-              }}
-              placeholder="0x..."
-              error={errors.wallet}
-              onBlur={() => {
-                if (isValidEvm(wallet)) setWalletConfirmed(true);
-              }}
-            />
-            {!c5 && isValidEvm(wallet) && (
-              <button
-                onClick={() => setWalletConfirmed(true)}
-                style={{
-                  marginTop: 8,
-                  width: "100%",
-                  background: C.accent,
-                  color: "#000",
-                  border: "none",
-                  borderRadius: 6,
-                  padding: "7px",
-                  fontFamily: body,
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  cursor: "pointer",
-                }}
-              >
-                Confirm Wallet
-              </button>
-            )}
-          </TaskCard>
-        )}
-
-        {/* Submit */}
-        {c4 && (
-          <div
-            className="task-card"
-            style={{ animationDelay: "80ms", marginTop: 4 }}
-          >
-            {errors.submit && (
-              <p
-                style={{
-                  color: C.error,
-                  fontSize: 13,
-                  marginBottom: 14,
-                  textAlign: "center",
-                  fontWeight: 500,
-                  fontFamily: body,
-                }}
-              >
-                {errors.submit}
-              </p>
-            )}
+            >
+              Join the community on X to stay updated on mint announcements.
+            </p>
             <button
-              className="btn-primary"
-              onClick={handleSubmit}
-              disabled={submitting || !allDone}
+              onClick={() => go(X_URL, "follow")}
               style={{
                 width: "100%",
-                padding: "16px",
-                background: allDone ? C.accent : "rgba(255,255,255,0.04)",
+                padding: "14px",
+                background: done.follow ? P.goldDim : "rgba(255,255,255,0.04)",
+                border: `1px solid ${done.follow ? P.gold : P.border}`,
                 borderRadius: 12,
+                color: done.follow ? P.gold : P.text,
+                fontFamily: body,
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: "pointer",
+                letterSpacing: "0.04em",
+                marginBottom: 20,
+                transition: "all 0.2s",
+              }}
+            >
+              {done.follow ? "Following Confirmed" : "Open X & Follow"}
+            </button>
+            <div style={{ marginBottom: 8 }}>
+              <label
+                style={{
+                  fontFamily: body,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: P.dim,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                Your X Handle
+              </label>
+              <input
+                value={twitter}
+                onChange={(e) => setTwitter(e.target.value)}
+                placeholder="@yourhandle"
+                style={{
+                  width: "100%",
+                  background: "rgba(255,255,255,0.03)",
+                  border: `1px solid ${P.border}`,
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  color: P.text,
+                  fontFamily: body,
+                  fontSize: 14,
+                  outline: "none",
+                }}
+                onFocus={(e) =>
+                  (e.currentTarget.style.borderColor = P.gold)
+                }
+                onBlur={(e) =>
+                  (e.currentTarget.style.borderColor = P.border)
+                }
+              />
+            </div>
+            <button
+              disabled={!done.follow || !twitter.trim()}
+              onClick={() => setStep(1)}
+              style={{
+                marginTop: 12,
+                padding: "12px 28px",
+                background:
+                  done.follow && twitter.trim() ? P.gold : "rgba(255,255,255,0.04)",
                 border: "none",
-                color: allDone ? "#000" : "rgba(255,255,255,0.18)",
+                borderRadius: 10,
+                color:
+                  done.follow && twitter.trim() ? "#000" : P.dim,
                 fontFamily: body,
                 fontWeight: 800,
-                fontSize: 14,
+                fontSize: 12,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
                 cursor:
-                  allDone && !submitting ? "pointer" : "not-allowed",
-                boxShadow: allDone
-                  ? "0 4px 24px rgba(212,168,83,0.25)"
-                  : "none",
-                opacity: submitting ? 0.6 : 1,
-                transition: "all 0.3s ease",
+                  done.follow && twitter.trim()
+                    ? "pointer"
+                    : "not-allowed",
+                transition: "all 0.2s",
               }}
             >
-              {submitting
-                ? "Securing your spot..."
-                : "Secure My Spot"}
+              Continue
             </button>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div style={{ animation: "fadeIn 0.3s ease" }}>
+            <h4
+              style={{
+                fontFamily: display,
+                fontSize: 22,
+                color: P.text,
+                marginBottom: 8,
+                fontWeight: 600,
+              }}
+            >
+              Like & Repost
+            </h4>
             <p
               style={{
-                textAlign: "center",
-                fontSize: 11,
-                color: C.textDim,
-                marginTop: 12,
                 fontFamily: body,
+                fontSize: 14,
+                color: P.muted,
+                marginBottom: 28,
+                lineHeight: 1.6,
               }}
             >
-              Double-check your wallet before submitting.
+              Engage with the pinned tweet to boost visibility.
             </p>
+            <button
+              onClick={() => go(PINNED_TWEET, "like")}
+              style={{
+                width: "100%",
+                padding: "14px",
+                background: done.like ? P.goldDim : "rgba(255,255,255,0.04)",
+                border: `1px solid ${done.like ? P.gold : P.border}`,
+                borderRadius: 12,
+                color: done.like ? P.gold : P.text,
+                fontFamily: body,
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: "pointer",
+                letterSpacing: "0.04em",
+                marginBottom: 20,
+                transition: "all 0.2s",
+              }}
+            >
+              {done.like ? "Engagement Recorded" : "Open Pinned Tweet"}
+            </button>
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                justifyContent: "space-between",
+              }}
+            >
+              <button
+                onClick={() => setStep(0)}
+                style={{
+                  padding: "12px 24px",
+                  background: "transparent",
+                  border: `1px solid ${P.border}`,
+                  borderRadius: 10,
+                  color: P.muted,
+                  fontFamily: body,
+                  fontWeight: 700,
+                  fontSize: 12,
+                  cursor: "pointer",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Back
+              </button>
+              <button
+                disabled={!done.like}
+                onClick={() => setStep(2)}
+                style={{
+                  padding: "12px 28px",
+                  background: done.like ? P.gold : "rgba(255,255,255,0.04)",
+                  border: "none",
+                  borderRadius: 10,
+                  color: done.like ? "#000" : P.dim,
+                  fontFamily: body,
+                  fontWeight: 800,
+                  fontSize: 12,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  cursor: done.like ? "pointer" : "not-allowed",
+                  transition: "all 0.2s",
+                }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div style={{ animation: "fadeIn 0.3s ease" }}>
+            <h4
+              style={{
+                fontFamily: display,
+                fontSize: 22,
+                color: P.text,
+                marginBottom: 8,
+                fontWeight: 600,
+              }}
+            >
+              Quote the Post
+            </h4>
+            <p
+              style={{
+                fontFamily: body,
+                fontSize: 14,
+                color: P.muted,
+                marginBottom: 28,
+                lineHeight: 1.6,
+              }}
+            >
+              Quote the pinned tweet with your thoughts and paste the link
+              below.
+            </p>
+            <button
+              onClick={() => window.open(PINNED_TWEET, "_blank")}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: "rgba(255,255,255,0.04)",
+                border: `1px solid ${P.border}`,
+                borderRadius: 10,
+                color: P.muted,
+                fontFamily: body,
+                fontWeight: 700,
+                fontSize: 12,
+                cursor: "pointer",
+                letterSpacing: "0.04em",
+                marginBottom: 20,
+              }}
+            >
+              Open Tweet to Quote
+            </button>
+            <div style={{ marginBottom: 24 }}>
+              <label
+                style={{
+                  fontFamily: body,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: P.dim,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                Quote Link
+              </label>
+              <input
+                value={quoteUrl}
+                onChange={(e) => setQuoteUrl(e.target.value)}
+                placeholder="https://x.com/..."
+                style={{
+                  width: "100%",
+                  background: "rgba(255,255,255,0.03)",
+                  border: `1px solid ${
+                    quoteUrl && !isValidUrl(quoteUrl)
+                      ? P.error
+                      : P.border
+                  }`,
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  color: P.text,
+                  fontFamily: body,
+                  fontSize: 14,
+                  outline: "none",
+                }}
+                onFocus={(e) =>
+                  (e.currentTarget.style.borderColor = P.gold)
+                }
+                onBlur={(e) =>
+                  (e.currentTarget.style.borderColor = P.border)
+                }
+              />
+              {quoteUrl && !isValidUrl(quoteUrl) && (
+                <p
+                  style={{
+                    fontFamily: body,
+                    fontSize: 12,
+                    color: P.error,
+                    marginTop: 6,
+                  }}
+                >
+                  Enter a valid URL
+                </p>
+              )}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                justifyContent: "space-between",
+              }}
+            >
+              <button
+                onClick={() => setStep(1)}
+                style={{
+                  padding: "12px 24px",
+                  background: "transparent",
+                  border: `1px solid ${P.border}`,
+                  borderRadius: 10,
+                  color: P.muted,
+                  fontFamily: body,
+                  fontWeight: 700,
+                  fontSize: 12,
+                  cursor: "pointer",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Back
+              </button>
+              <button
+                disabled={!isValidUrl(quoteUrl)}
+                onClick={() => setStep(3)}
+                style={{
+                  padding: "12px 28px",
+                  background: isValidUrl(quoteUrl)
+                    ? P.gold
+                    : "rgba(255,255,255,0.04)",
+                  border: "none",
+                  borderRadius: 10,
+                  color: isValidUrl(quoteUrl) ? "#000" : P.dim,
+                  fontFamily: body,
+                  fontWeight: 800,
+                  fontSize: 12,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  cursor: isValidUrl(quoteUrl)
+                    ? "pointer"
+                    : "not-allowed",
+                  transition: "all 0.2s",
+                }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div style={{ animation: "fadeIn 0.3s ease" }}>
+            <h4
+              style={{
+                fontFamily: display,
+                fontSize: 22,
+                color: P.text,
+                marginBottom: 8,
+                fontWeight: 600,
+              }}
+            >
+              Drop Your Wallet
+            </h4>
+            <p
+              style={{
+                fontFamily: body,
+                fontSize: 14,
+                color: P.muted,
+                marginBottom: 28,
+                lineHeight: 1.6,
+              }}
+            >
+              This is where your GOME NFT will be sent. Double-check before
+              submitting.
+            </p>
+            <div style={{ marginBottom: 24 }}>
+              <label
+                style={{
+                  fontFamily: body,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: P.dim,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                EVM Address
+              </label>
+              <input
+                value={wallet}
+                onChange={(e) => setWallet(e.target.value)}
+                placeholder="0x..."
+                style={{
+                  width: "100%",
+                  background: "rgba(255,255,255,0.03)",
+                  border: `1px solid ${
+                    wallet && !isValidEvm(wallet)
+                      ? P.error
+                      : P.border
+                  }`,
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  color: P.text,
+                  fontFamily: body,
+                  fontSize: 14,
+                  outline: "none",
+                  fontFamily: "monospace",
+                }}
+                onFocus={(e) =>
+                  (e.currentTarget.style.borderColor = P.gold)
+                }
+                onBlur={(e) =>
+                  (e.currentTarget.style.borderColor = P.border)
+                }
+              />
+              {wallet && !isValidEvm(wallet) && (
+                <p
+                  style={{
+                    fontFamily: body,
+                    fontSize: 12,
+                    color: P.error,
+                    marginTop: 6,
+                  }}
+                >
+                  Invalid EVM address
+                </p>
+              )}
+            </div>
+            {err && (
+              <p
+                style={{
+                  fontFamily: body,
+                  fontSize: 13,
+                  color: P.error,
+                  marginBottom: 16,
+                  fontWeight: 500,
+                }}
+              >
+                {err}
+              </p>
+            )}
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                justifyContent: "space-between",
+              }}
+            >
+              <button
+                onClick={() => setStep(2)}
+                style={{
+                  padding: "12px 24px",
+                  background: "transparent",
+                  border: `1px solid ${P.border}`,
+                  borderRadius: 10,
+                  color: P.muted,
+                  fontFamily: body,
+                  fontWeight: 700,
+                  fontSize: 12,
+                  cursor: "pointer",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Back
+              </button>
+              <button
+                disabled={!isValidEvm(wallet) || busy}
+                onClick={submit}
+                style={{
+                  padding: "12px 32px",
+                  background: isValidEvm(wallet)
+                    ? P.gold
+                    : "rgba(255,255,255,0.04)",
+                  border: "none",
+                  borderRadius: 10,
+                  color: isValidEvm(wallet) ? "#000" : P.dim,
+                  fontFamily: body,
+                  fontWeight: 800,
+                  fontSize: 12,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  cursor: isValidEvm(wallet) && !busy
+                    ? "pointer"
+                    : "not-allowed",
+                  transition: "all 0.2s",
+                }}
+              >
+                {busy ? "Submitting..." : "Secure My Spot"}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -1043,219 +849,181 @@ function WhitelistModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-/* ── Coin Card ── */
+/* ════════════════════════════════════════
+   COIN CARD
+   ════════════════════════════════════════ */
 function CoinCard({
   coin,
   index,
 }: {
-  coin: (typeof COINS)[0];
+  coin: { id: string; name: string; img: string; color: string; tagline: string; desc: string };
   index: number;
 }) {
-  const { ref, visible } = useScrollReveal();
+  const { ref, on } = useReveal();
   return (
     <div
       ref={ref}
       style={{
-        background: "rgba(255,255,255,0.015)",
-        border: `1px solid ${C.cardBorder}`,
+        background: P.surface,
+        border: `1px solid ${P.border}`,
         borderRadius: 20,
-        padding: "32px 28px",
-        textAlign: "center",
-        transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(40px)",
-        position: "relative",
+        padding: 0,
         overflow: "hidden",
+        opacity: on ? 1 : 0,
+        transform: on ? "translateY(0)" : "translateY(40px)",
+        transition: "opacity 0.7s ease, transform 0.7s ease",
+        transitionDelay: `${index * 100}ms`,
+        position: "relative",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = `${coin.color}33`;
+        e.currentTarget.style.borderColor = `${coin.color}30`;
         e.currentTarget.style.transform = "translateY(-6px)";
-        e.currentTarget.style.boxShadow = `0 20px 50px ${coin.color}11`;
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = C.cardBorder;
+        e.currentTarget.style.borderColor = P.border;
         e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "none";
       }}
     >
       <div
         style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "200px",
-          height: "200px",
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${coin.color}10 0%, transparent 70%)`,
-          pointerEvents: "none",
-        }}
-      />
-      <div
-        style={{
-          width: "160px",
-          height: "160px",
-          margin: "0 auto 24px",
-          borderRadius: "20px",
-          background: `${coin.color}10`,
-          border: `2px solid ${coin.color}30`,
+          height: 220,
+          background: `linear-gradient(135deg, ${coin.color}08, transparent)`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          overflow: "hidden",
           position: "relative",
-          zIndex: 1,
+          overflow: "hidden",
         }}
       >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: `radial-gradient(circle at 50% 120%, ${coin.color}15, transparent 60%)`,
+          }}
+        />
         <img
           src={coin.img}
           alt={coin.name}
           style={{
-            width: "100%",
-            height: "100%",
+            height: "80%",
+            width: "auto",
             objectFit: "contain",
-            padding: "16px",
+            position: "relative",
+            zIndex: 1,
+            filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.5))",
           }}
         />
       </div>
-      <h3
-        style={{
-          fontFamily: display,
-          fontSize: "clamp(1.8rem, 4vw, 2.4rem)",
-          color: coin.color,
-          marginBottom: 8,
-          letterSpacing: "0.04em",
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
-        {coin.name}
-      </h3>
-      <p
-        style={{
-          fontFamily: display,
-          fontSize: "1rem",
-          color: "#fff",
-          marginBottom: 12,
-          position: "relative",
-          zIndex: 1,
-          fontWeight: 600,
-        }}
-      >
-        {coin.tagline}
-      </p>
-      <p
-        style={{
-          fontFamily: body,
-          fontSize: "0.9rem",
-          color: C.textMuted,
-          lineHeight: 1.7,
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
-        {coin.desc}
-      </p>
-    </div>
-  );
-}
-
-/* ── FAQ Item ── */
-function FaqItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ borderBottom: `1px solid ${C.cardBorder}` }}>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          width: "100%",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          padding: "18px 0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "12px",
-        }}
-      >
-        <span
+      <div style={{ padding: "28px 24px" }}>
+        <h3
           style={{
-            fontFamily: body,
-            fontSize: "1rem",
-            fontWeight: 700,
-            color: open ? "#fff" : C.textMuted,
-            textAlign: "left",
-            transition: "color 0.2s",
-          }}
-        >
-          {q}
-        </span>
-        <span
-          style={{
-            color: C.accent,
-            fontSize: "1.2rem",
-            flexShrink: 0,
-            transition: "transform 0.25s",
-            transform: open ? "rotate(45deg)" : "rotate(0)",
             fontFamily: display,
+            fontSize: "clamp(1.6rem, 3vw, 2rem)",
+            color: coin.color,
+            margin: "0 0 6px",
+            fontWeight: 600,
+            letterSpacing: "0.02em",
           }}
         >
-          +
-        </span>
-      </button>
-      {open && (
+          {coin.name}
+        </h3>
+        <p
+          style={{
+            fontFamily: display,
+            fontSize: 15,
+            color: P.text,
+            margin: "0 0 12px",
+            fontWeight: 500,
+          }}
+        >
+          {coin.tagline}
+        </p>
         <p
           style={{
             fontFamily: body,
-            fontSize: "0.9rem",
-            color: C.textMuted,
-            padding: "0 0 18px",
-            margin: 0,
+            fontSize: 14,
+            color: P.muted,
             lineHeight: 1.7,
-            fontWeight: 400,
+            margin: 0,
           }}
         >
-          {a}
+          {coin.desc}
         </p>
-      )}
+      </div>
     </div>
   );
 }
 
-/* ════════════════════ MAIN ════════════════════ */
+/* ════════════════════════════════════════
+   MAIN PAGE
+   ════════════════════════════════════════ */
 export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [already, setAlready] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem("gome_submitted") === "true")
-      setAlreadySubmitted(true);
-
-    const l = document.createElement("link");
-    l.rel = "stylesheet";
-    l.href = FONT_LINK;
-    document.head.appendChild(l);
-
-    const onScroll = () => setScrolled(window.scrollY > 50);
+    if (localStorage.getItem(LS_KEY) === "1") setAlready(true);
+    const onScroll = () => setScrolled(window.scrollY > 60);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const coins = [
+    {
+      id: "pepe",
+      name: "PEPE",
+      img: "/PEPE.PNG",
+      color: P.pepe,
+      tagline: "The original meme. The eternal vibe.",
+      desc: "The face of internet culture. Green, unserious, and completely iconic. Every collection needs a PEPE.",
+    },
+    {
+      id: "bonk",
+      name: "BONK",
+      img: "/BONK.PNG",
+      color: P.bonk,
+      tagline: "Bonk first. Ask questions never.",
+      desc: "Raw, chaotic energy. The bat swings and the timeline reacts. Maximum chaos, minimum regret.",
+    },
+    {
+      id: "brett",
+      name: "BRETT",
+      img: "/BRETT.PNG",
+      color: P.brett,
+      tagline: "Just a guy. With all the vibes.",
+      desc: "The laid-back king. Doesn't try hard, somehow wins anyway. Chill personified, now on-chain.",
+    },
+  ];
+
   return (
     <div
       style={{
-        background: C.bg,
+        background: P.bg,
         minHeight: "100vh",
-        color: "#fff",
-        overflowX: "hidden",
+        color: P.text,
         fontFamily: body,
+        overflowX: "hidden",
       }}
     >
-      <style>{globalStyles}</style>
+      <style>{`
+        @import url('${FONT_LINK}');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { background: ${P.bg}; }
+        ::selection { background: ${P.gold}; color: #000; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: ${P.bg}; }
+        ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.35); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes heroImg { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      `}</style>
 
-      {/* ── Navigation ── */}
+      {/* ── Nav ── */}
       <nav
         style={{
           position: "fixed",
@@ -1263,16 +1031,18 @@ export default function Home() {
           left: 0,
           right: 0,
           zIndex: 50,
-          background: scrolled ? "rgba(5,5,5,0.9)" : "transparent",
-          backdropFilter: scrolled ? "blur(16px)" : "none",
-          borderBottom: scrolled
-            ? `1px solid ${C.cardBorder}`
-            : "1px solid transparent",
-          padding: "0 32px",
           height: 72,
+          padding: "0 32px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          background: scrolled
+            ? "rgba(7,7,7,0.92)"
+            : "transparent",
+          backdropFilter: scrolled ? "blur(20px)" : "none",
+          borderBottom: scrolled
+            ? `1px solid ${P.border}`
+            : "1px solid transparent",
           transition: "all 0.4s ease",
         }}
       >
@@ -1286,7 +1056,12 @@ export default function Home() {
           <img
             src={LOGO}
             alt="GOME"
-            style={{ height: 36, width: 36, objectFit: "contain" }}
+            style={{
+              height: 34,
+              width: 34,
+              objectFit: "contain",
+              filter: "brightness(1.1)",
+            }}
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
@@ -1294,15 +1069,42 @@ export default function Home() {
           <span
             style={{
               fontFamily: display,
-              fontWeight: 700,
-              fontSize: 22,
-              letterSpacing: "0.08em",
-              color: "#fff",
+              fontSize: 20,
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              color: P.text,
             }}
           >
             GOME
           </span>
         </div>
+        <button
+          onClick={() => setModalOpen(true)}
+          style={{
+            fontFamily: body,
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: "#000",
+            background: P.gold,
+            border: "none",
+            borderRadius: 10,
+            padding: "10px 24px",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#e0c160";
+            e.currentTarget.style.transform = "translateY(-1px)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = P.gold;
+            e.currentTarget.style.transform = "translateY(0)";
+          }}
+        >
+          Whitelist
+        </button>
       </nav>
 
       {/* ── Hero ── */}
@@ -1311,209 +1113,204 @@ export default function Home() {
           position: "relative",
           minHeight: "100vh",
           display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
+          alignItems: "flex-end",
           justifyContent: "center",
-          padding: "120px 24px 80px",
-          textAlign: "center",
+          padding: "0 24px 0",
           overflow: "hidden",
         }}
       >
-        <ParticleCanvas />
-
+        {/* Background gradient */}
         <div
           style={{
             position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: "40%",
-            background: "linear-gradient(to top, #050505, transparent)",
-            zIndex: 2,
+            inset: 0,
+            background:
+              "radial-gradient(ellipse 80% 60% at 50% 100%, rgba(201,168,76,0.08) 0%, transparent 70%)",
             pointerEvents: "none",
           }}
         />
 
         <div
-          style={{ position: "relative", zIndex: 3, maxWidth: 640 }}
+          style={{
+            position: "relative",
+            zIndex: 2,
+            width: "100%",
+            maxWidth: 1200,
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: 40,
+            paddingBottom: 80,
+            flexWrap: "wrap",
+          }}
         >
+          {/* Text */}
           <div
-            className="slide-up"
             style={{
-              width: 260,
-              height: 260,
-              margin: "0 auto 32px",
-              borderRadius: 24,
-              background: `linear-gradient(135deg, rgba(107,63,160,0.15), rgba(212,168,83,0.1))`,
-              border: `1px solid rgba(255,255,255,0.06)`,
+              flex: "1 1 400px",
+              paddingBottom: 60,
+              animation: "slideUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.1s both",
+            }}
+          >
+            <p
+              style={{
+                fontFamily: body,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.25em",
+                textTransform: "uppercase",
+                color: P.gold,
+                marginBottom: 20,
+              }}
+            >
+              Gallery of Memes
+            </p>
+            <h1
+              style={{
+                fontFamily: display,
+                fontSize: "clamp(4rem, 12vw, 8rem)",
+                fontWeight: 600,
+                lineHeight: 0.95,
+                color: P.text,
+                marginBottom: 24,
+                letterSpacing: "-0.03em",
+              }}
+            >
+              4,004
+              <br />
+              <span style={{ color: P.gold }}>Memes</span>
+            </h1>
+            <p
+              style={{
+                fontFamily: body,
+                fontSize: 16,
+                color: P.muted,
+                lineHeight: 1.7,
+                maxWidth: 420,
+                marginBottom: 36,
+              }}
+            >
+              PEPE, BONK, and BRETT — hand-crafted characters built for the
+              culture. One collection. Ethereum. Zero apologies.
+            </p>
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+              <button
+                onClick={() => setModalOpen(true)}
+                style={{
+                  fontFamily: body,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#000",
+                  background: P.gold,
+                  border: "none",
+                  borderRadius: 12,
+                  padding: "16px 36px",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  boxShadow: `0 4px 24px ${P.goldGlow}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#e0c160";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = `0 8px 32px ${P.goldGlow}`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = P.gold;
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = `0 4px 24px ${P.goldGlow}`;
+                }}
+              >
+                Apply for Whitelist
+              </button>
+              <a
+                href="#collection"
+                style={{
+                  fontFamily: body,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: P.muted,
+                  border: `1px solid ${P.border}`,
+                  borderRadius: 12,
+                  padding: "16px 36px",
+                  textDecoration: "none",
+                  display: "inline-block",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = P.gold;
+                  e.currentTarget.style.color = P.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = P.border;
+                  e.currentTarget.style.color = P.muted;
+                }}
+              >
+                Explore
+              </a>
+            </div>
+          </div>
+
+          {/* Hero Image — standalone, no box */}
+          <div
+            style={{
+              flex: "1 1 400px",
               display: "flex",
-              alignItems: "center",
               justifyContent: "center",
-              overflow: "hidden",
-              boxShadow:
-                "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(212,168,83,0.08)",
-              animationDelay: "0ms",
+              alignItems: "flex-end",
+              position: "relative",
+              animation:
+                "heroImg 1s cubic-bezier(0.16,1,0.3,1) 0.3s both",
             }}
           >
             <img
               src={HERO_IMG}
               alt="GOME Hero"
               style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                borderRadius: 24,
+                maxWidth: "100%",
+                height: "auto",
+                maxHeight: "70vh",
+                objectFit: "contain",
+                filter: "drop-shadow(0 40px 60px rgba(0,0,0,0.6))",
+                display: "block",
               }}
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = "none";
-                const parent = (e.target as HTMLImageElement)
-                  .parentElement;
-                if (parent)
-                  parent.innerHTML =
-                    '<span style="font-family:Fredoka,sans-serif;font-size:64px;color:#D4A853;">GO</span>';
               }}
             />
           </div>
-
-          <div
-            className="slide-up"
-            style={{ animationDelay: "150ms" }}
-          >
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: C.accent,
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                marginBottom: 16,
-                fontFamily: body,
-              }}
-            >
-              Gallery of Memes — 12,012 NFTs on Ethereum
-            </p>
-          </div>
-
-          <h1
-            className="slide-up"
-            style={{
-              fontFamily: display,
-              fontSize: "clamp(3.5rem, 10vw, 6rem)",
-              fontWeight: 700,
-              lineHeight: 1.05,
-              color: "#fff",
-              marginBottom: 20,
-              letterSpacing: "-0.02em",
-              animationDelay: "250ms",
-            }}
-          >
-            GOME
-          </h1>
-
-          <p
-            className="slide-up"
-            style={{
-              fontSize: 16,
-              color: C.textMuted,
-              lineHeight: 1.75,
-              maxWidth: 480,
-              margin: "0 auto 36px",
-              animationDelay: "350ms",
-              fontFamily: body,
-            }}
-          >
-            The meme coins you love — now as NFTs. Pepe, Bonk, and Brett.
-            4,004 each. One collection. Zero apologies.
-          </p>
-
-          <div
-            className="slide-up"
-            style={{ animationDelay: "450ms" }}
-          >
-            <button
-              className="btn-primary"
-              onClick={() => setModalOpen(true)}
-              style={{
-                padding: "16px 48px",
-                background: C.accent,
-                borderRadius: 14,
-                border: "none",
-                color: "#000",
-                fontFamily: body,
-                fontWeight: 800,
-                fontSize: 15,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                cursor: "pointer",
-                boxShadow: "0 4px 24px rgba(212,168,83,0.25)",
-              }}
-            >
-              Apply for Whitelist
-            </button>
-          </div>
-        </div>
-
-        {/* Scroll hint */}
-        <div
-          className="fade-in"
-          style={{
-            position: "absolute",
-            bottom: 32,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 3,
-            animationDelay: "1s",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 8,
-            opacity: 0.4,
-          }}
-        >
-          <span
-            style={{
-              fontFamily: body,
-              fontSize: 10,
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: C.accent,
-              fontWeight: 700,
-            }}
-          >
-            Scroll
-          </span>
-          <div
-            style={{
-              width: 1,
-              height: 28,
-              background: `linear-gradient(180deg, ${C.accent}, transparent)`,
-            }}
-          />
         </div>
       </section>
 
-      {/* ── The Memes ── */}
+      {/* ── Collection ── */}
       <section
+        id="collection"
         style={{
-          padding: "100px 24px",
-          background: "linear-gradient(180deg, #050505 0%, #0a0a0a 50%, #050505 100%)",
+          padding: "120px 24px",
+          background: P.bg,
           position: "relative",
         }}
       >
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div
-            className="slide-up"
-            style={{ textAlign: "center", marginBottom: 60 }}
+            style={{
+              textAlign: "center",
+              marginBottom: 64,
+              animation: "slideUp 0.7s ease both",
+            }}
           >
             <p
               style={{
+                fontFamily: body,
                 fontSize: 11,
                 fontWeight: 700,
-                color: C.accent,
                 letterSpacing: "0.2em",
                 textTransform: "uppercase",
+                color: P.gold,
                 marginBottom: 14,
-                fontFamily: body,
               }}
             >
               The Collection
@@ -1521,28 +1318,26 @@ export default function Home() {
             <h2
               style={{
                 fontFamily: display,
-                fontSize: "clamp(2rem, 5vw, 3rem)",
-                fontWeight: 700,
-                color: "#fff",
-                marginBottom: 16,
+                fontSize: "clamp(2rem, 5vw, 3.2rem)",
+                fontWeight: 600,
+                color: P.text,
                 letterSpacing: "-0.02em",
+                marginBottom: 12,
               }}
             >
-              Meet the{" "}
-              <span style={{ color: C.accent }}>Memes</span>
+              Meet the <span style={{ color: P.gold }}>Legends</span>
             </h2>
             <p
               style={{
-                fontSize: 16,
-                color: C.textMuted,
-                lineHeight: 1.8,
-                maxWidth: 520,
-                margin: "0 auto",
                 fontFamily: body,
+                fontSize: 16,
+                color: P.muted,
+                maxWidth: 480,
+                margin: "0 auto",
+                lineHeight: 1.7,
               }}
             >
-              Three legends. One gallery. Hand-crafted characters built
-              for the culture.
+              Three icons. One gallery. Hand-crafted for the culture.
             </p>
           </div>
 
@@ -1554,8 +1349,8 @@ export default function Home() {
               gap: 20,
             }}
           >
-            {COINS.map((coin, i) => (
-              <CoinCard key={coin.id} coin={coin} index={i} />
+            {coins.map((c, i) => (
+              <CoinCard key={c.id} coin={c} index={i} />
             ))}
           </div>
         </div>
@@ -1565,25 +1360,28 @@ export default function Home() {
       <section
         style={{
           padding: "100px 24px",
-          background: C.bg,
-          borderTop: `1px solid ${C.cardBorder}`,
-          borderBottom: `1px solid ${C.cardBorder}`,
+          background: P.bgElevated,
+          borderTop: `1px solid ${P.border}`,
+          borderBottom: `1px solid ${P.border}`,
         }}
       >
-        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
           <div
-            className="slide-up"
-            style={{ textAlign: "center", marginBottom: 48 }}
+            style={{
+              textAlign: "center",
+              marginBottom: 48,
+              animation: "slideUp 0.7s ease both",
+            }}
           >
             <p
               style={{
+                fontFamily: body,
                 fontSize: 11,
                 fontWeight: 700,
-                color: C.accent,
                 letterSpacing: "0.2em",
                 textTransform: "uppercase",
+                color: P.gold,
                 marginBottom: 14,
-                fontFamily: body,
               }}
             >
               Mint Details
@@ -1591,14 +1389,13 @@ export default function Home() {
             <h2
               style={{
                 fontFamily: display,
-                fontSize: "clamp(2rem, 5vw, 3rem)",
-                fontWeight: 700,
-                color: "#fff",
+                fontSize: "clamp(2rem, 5vw, 3.2rem)",
+                fontWeight: 600,
+                color: P.text,
                 letterSpacing: "-0.02em",
               }}
             >
-              The{" "}
-              <span style={{ color: C.accent }}>Specs</span>
+              The <span style={{ color: P.gold }}>Specs</span>
             </h2>
           </div>
 
@@ -1606,42 +1403,45 @@ export default function Home() {
             style={{
               display: "grid",
               gridTemplateColumns:
-                "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: 16,
+                "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: 1,
+              background: P.border,
+              borderRadius: 16,
+              overflow: "hidden",
+              border: `1px solid ${P.border}`,
             }}
           >
-            {MINT_INFO.map((item, i) => (
+            {[
+              { label: "Collection Size", value: "4,004" },
+              { label: "Mint Price", value: "0.0009 ETH" },
+              { label: "Blockchain", value: "Ethereum" },
+              { label: "Marketplace", value: "OpenSea" },
+              { label: "Characters", value: "PEPE · BONK · BRETT" },
+            ].map((item, i) => (
               <div
                 key={i}
-                className="slide-up"
                 style={{
-                  background: "rgba(255,255,255,0.02)",
-                  border: `1px solid ${C.cardBorder}`,
-                  borderRadius: 16,
-                  padding: "28px 20px",
+                  background: P.surface,
+                  padding: "32px 20px",
                   textAlign: "center",
-                  transition: "all 0.3s ease",
-                  animationDelay: `${i * 100}ms`,
+                  transition: "background 0.2s",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor =
-                    "rgba(212,168,83,0.2)";
-                  e.currentTarget.style.transform =
-                    "translateY(-4px)";
+                  e.currentTarget.style.background = "rgba(255,255,255,0.03)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = C.cardBorder;
-                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.background = P.surface;
                 }}
               >
                 <p
                   style={{
                     margin: 0,
                     fontFamily: display,
-                    fontSize: "1.5rem",
-                    color: C.accent,
-                    letterSpacing: "0.04em",
-                    marginBottom: 8,
+                    fontSize: "clamp(1.3rem, 3vw, 1.8rem)",
+                    color: P.gold,
+                    fontWeight: 600,
+                    letterSpacing: "0.02em",
+                    marginBottom: 6,
                   }}
                 >
                   {item.value}
@@ -1650,11 +1450,11 @@ export default function Home() {
                   style={{
                     margin: 0,
                     fontFamily: body,
-                    fontSize: "0.65rem",
+                    fontSize: 11,
+                    fontWeight: 700,
                     letterSpacing: "0.16em",
                     textTransform: "uppercase",
-                    color: C.textDim,
-                    fontWeight: 700,
+                    color: P.dim,
                   }}
                 >
                   {item.label}
@@ -1668,56 +1468,39 @@ export default function Home() {
       {/* ── Lore ── */}
       <section
         style={{
-          padding: "100px 24px",
-          background: C.bgElevated,
+          padding: 0,
+          background: P.bg,
           position: "relative",
           overflow: "hidden",
         }}
       >
         <div
           style={{
-            maxWidth: 1000,
+            maxWidth: 1200,
             margin: "0 auto",
             display: "flex",
             alignItems: "center",
-            gap: 60,
             flexWrap: "wrap",
-            position: "relative",
-            zIndex: 1,
+            minHeight: "70vh",
           }}
         >
           <div
             style={{
-              flex: "1 1 300px",
-              borderRadius: 20,
-              overflow: "hidden",
-              border: `1px solid ${C.cardBorder}`,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+              flex: "1 1 500px",
+              padding: "80px 24px 80px 48px",
+              position: "relative",
+              zIndex: 2,
             }}
           >
-            <img
-              src={LORE_IMG}
-              alt="GOME Lore"
-              style={{
-                width: "100%",
-                height: "auto",
-                display: "block",
-              }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-          </div>
-          <div style={{ flex: "1 1 400px" }}>
             <p
               style={{
+                fontFamily: body,
                 fontSize: 11,
                 fontWeight: 700,
-                color: C.accent,
                 letterSpacing: "0.2em",
                 textTransform: "uppercase",
-                marginBottom: 14,
-                fontFamily: body,
+                color: P.gold,
+                marginBottom: 16,
               }}
             >
               The Lore
@@ -1725,42 +1508,71 @@ export default function Home() {
             <h2
               style={{
                 fontFamily: display,
-                fontSize: "clamp(2rem, 5vw, 3rem)",
-                fontWeight: 700,
-                color: "#fff",
-                marginBottom: 20,
-                letterSpacing: "-0.02em",
+                fontSize: "clamp(2.2rem, 5vw, 3.5rem)",
+                fontWeight: 600,
+                color: P.text,
                 lineHeight: 1.1,
+                marginBottom: 24,
+                letterSpacing: "-0.02em",
               }}
             >
-              From the trenches to the{" "}
-              <span style={{ color: C.accent }}>chain.</span>
+              From the trenches
+              <br />
+              to the <span style={{ color: P.gold }}>chain.</span>
             </h2>
             <p
               style={{
+                fontFamily: body,
                 fontSize: 16,
-                color: C.textMuted,
+                color: P.muted,
                 lineHeight: 1.8,
                 marginBottom: 16,
-                fontFamily: body,
+                maxWidth: 440,
               }}
             >
-              GOME started as a joke in a group chat. Three meme coins,
-              three communities, one question: what if we put them all in
-              one place?
+              GOME started as a joke in a group chat. Three meme coins, three
+              communities, one question: what if we put them all in one place?
             </p>
             <p
               style={{
-                fontSize: 16,
-                color: C.textMuted,
-                lineHeight: 1.8,
                 fontFamily: body,
+                fontSize: 16,
+                color: P.muted,
+                lineHeight: 1.8,
+                maxWidth: 440,
               }}
             >
-              Now it's a 12,012-piece collection on Ethereum. No roadmap
-              promises. No utility fluff. Just art, culture, and the
-              memes that got us here.
+              Now it's a 4,004-piece collection on Ethereum. No roadmap
+              promises. No utility fluff. Just art, culture, and the memes that
+              got us here.
             </p>
+          </div>
+          <div
+            style={{
+              flex: "1 1 400px",
+              position: "relative",
+              minHeight: "60vh",
+            }}
+          >
+            <img
+              src={LORE_IMG}
+              alt="GOME Lore"
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: 0.7,
+                maskImage:
+                  "linear-gradient(to right, transparent, black 20%)",
+                WebkitMaskImage:
+                  "linear-gradient(to right, transparent, black 20%)",
+              }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
           </div>
         </div>
       </section>
@@ -1768,57 +1580,86 @@ export default function Home() {
       {/* ── CTA ── */}
       <section
         style={{
-          padding: "100px 24px",
+          padding: "120px 24px",
           textAlign: "center",
-          background: C.bg,
-          borderTop: `1px solid ${C.cardBorder}`,
+          background: P.bg,
+          borderTop: `1px solid ${P.border}`,
+          position: "relative",
+          overflow: "hidden",
         }}
       >
         <div
-          className="slide-up"
-          style={{ maxWidth: 500, margin: "0 auto" }}
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 600,
+            height: 300,
+            borderRadius: "50%",
+            background: `radial-gradient(ellipse, ${P.goldDim} 0%, transparent 70%)`,
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            maxWidth: 500,
+            margin: "0 auto",
+            animation: "slideUp 0.7s ease both",
+          }}
         >
           <h2
             style={{
               fontFamily: display,
-              fontSize: "clamp(2rem, 5vw, 3rem)",
-              fontWeight: 700,
-              color: "#fff",
-              marginBottom: 14,
+              fontSize: "clamp(2rem, 5vw, 3.2rem)",
+              fontWeight: 600,
+              color: P.text,
+              marginBottom: 16,
               letterSpacing: "-0.02em",
             }}
           >
-            Ready to join the{" "}
-            <span style={{ color: C.accent }}>gallery?</span>
+            Ready for the{" "}
+            <span style={{ color: P.gold }}>gallery?</span>
           </h2>
           <p
             style={{
-              fontSize: 16,
-              color: C.textMuted,
-              lineHeight: 1.7,
-              marginBottom: 28,
               fontFamily: body,
+              fontSize: 16,
+              color: P.muted,
+              lineHeight: 1.7,
+              marginBottom: 32,
             }}
           >
-            Spots are limited. Complete the whitelist missions to secure
-            your place.
+            Spots are limited. Complete the whitelist to secure your place.
           </p>
           <button
-            className="btn-primary"
             onClick={() => setModalOpen(true)}
             style={{
-              padding: "16px 48px",
-              background: C.accent,
-              borderRadius: 14,
-              border: "none",
-              color: "#000",
               fontFamily: body,
+              fontSize: 14,
               fontWeight: 800,
-              fontSize: 15,
-              letterSpacing: "0.06em",
+              letterSpacing: "0.08em",
               textTransform: "uppercase",
+              color: "#000",
+              background: P.gold,
+              border: "none",
+              borderRadius: 14,
+              padding: "18px 48px",
               cursor: "pointer",
-              boxShadow: "0 4px 24px rgba(212,168,83,0.25)",
+              transition: "all 0.2s",
+              boxShadow: `0 4px 24px ${P.goldGlow}`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#e0c160";
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = `0 8px 32px ${P.goldGlow}`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = P.gold;
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = `0 4px 24px ${P.goldGlow}`;
             }}
           >
             Join the Gallery
@@ -1827,14 +1668,14 @@ export default function Home() {
       </section>
 
       {/* ── FAQ ── */}
-      <section style={{ background: C.bg, padding: "80px 24px" }}>
+      <section style={{ padding: "80px 24px", background: P.bgElevated }}>
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <h2
             style={{
               fontFamily: display,
               fontSize: "clamp(2rem, 5vw, 3rem)",
-              fontWeight: 700,
-              color: "#fff",
+              fontWeight: 600,
+              color: P.text,
               marginBottom: 40,
               letterSpacing: "-0.02em",
               textAlign: "center",
@@ -1845,7 +1686,7 @@ export default function Home() {
           {[
             [
               "What is GOME?",
-              "Gallery of Memes — a 12,012 supply NFT collection featuring Pepe, Bonk, and Brett characters on Ethereum.",
+              "Gallery of Memes — a 4,004 supply NFT collection featuring PEPE, BONK, and BRETT characters on Ethereum.",
             ],
             [
               "What's the mint price?",
@@ -1861,7 +1702,7 @@ export default function Home() {
             ],
             [
               "How many NFTs are there?",
-              "12,012 total — 4,004 for each meme character.",
+              "4,004 total across all three characters.",
             ],
             [
               "Is this financial advice?",
@@ -1878,8 +1719,8 @@ export default function Home() {
         style={{
           padding: "60px 24px 40px",
           textAlign: "center",
-          background: "#060606",
-          borderTop: `1px solid ${C.cardBorder}`,
+          background: "#050505",
+          borderTop: `1px solid ${P.border}`,
         }}
       >
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
@@ -1895,15 +1736,15 @@ export default function Home() {
             <img
               src={LOGO}
               alt="GOME"
-              style={{ height: 32, width: 32, objectFit: "contain" }}
+              style={{ height: 30, width: 30, objectFit: "contain" }}
             />
             <span
               style={{
                 fontFamily: display,
-                fontWeight: 700,
-                fontSize: 20,
-                letterSpacing: "0.1em",
-                color: "#fff",
+                fontSize: 18,
+                fontWeight: 600,
+                letterSpacing: "0.08em",
+                color: P.text,
               }}
             >
               GOME
@@ -1911,18 +1752,17 @@ export default function Home() {
           </div>
           <p
             style={{
-              fontSize: 14,
-              color: C.textMuted,
-              marginBottom: 28,
               fontFamily: body,
-              lineHeight: 1.7,
+              fontSize: 14,
+              color: P.muted,
+              marginBottom: 28,
+              lineHeight: 1.6,
             }}
           >
-            Gallery of Memes. 12,012 NFTs. Ethereum.
+            Gallery of Memes. 4,004 NFTs. Ethereum.
             <br />
             PEPE · BONK · BRETT
           </p>
-
           <div
             style={{
               display: "flex",
@@ -1935,9 +1775,7 @@ export default function Home() {
             {[
               ["X / Twitter", X_URL],
               ["Whitelist", "#home"],
-              ["PEPE", "#pepe"],
-              ["BONK", "#bonk"],
-              ["BRETT", "#brett"],
+              ["Collection", "#collection"],
             ].map(([l, h]) => (
               <a
                 key={l}
@@ -1946,34 +1784,33 @@ export default function Home() {
                 rel="noopener noreferrer"
                 style={{
                   fontFamily: body,
-                  fontSize: "0.75rem",
+                  fontSize: 12,
                   fontWeight: 700,
                   letterSpacing: "0.12em",
                   textTransform: "uppercase",
-                  color: "rgba(212,168,83,0.5)",
-                  transition: "color 0.2s",
+                  color: "rgba(201,168,76,0.5)",
                   textDecoration: "none",
+                  transition: "color 0.2s",
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.color = "#fff")
+                  (e.currentTarget.style.color = P.text)
                 }
                 onMouseLeave={(e) =>
                   (e.currentTarget.style.color =
-                    "rgba(212,168,83,0.5)")
+                    "rgba(201,168,76,0.5)")
                 }
               >
                 {l}
               </a>
             ))}
           </div>
-
           <p
             style={{
               fontFamily: body,
               fontSize: 11,
-              letterSpacing: "0.24em",
+              letterSpacing: "0.2em",
               textTransform: "uppercase",
-              color: "rgba(212,168,83,0.25)",
+              color: "rgba(201,168,76,0.2)",
             }}
           >
             GOME — Gallery of Memes
@@ -1984,81 +1821,154 @@ export default function Home() {
       {/* ── Modal ── */}
       {modalOpen && (
         <div
-          className="fade-in"
           style={{
             position: "fixed",
             inset: 0,
             zIndex: 100,
-            background: "rgba(0,0,0,0.85)",
-            backdropFilter: "blur(12px)",
+            background: "rgba(0,0,0,0.88)",
+            backdropFilter: "blur(16px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             padding: "20px",
             overflowY: "auto",
+            animation: "fadeIn 0.3s ease",
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget) setModalOpen(false);
           }}
         >
-          {alreadySubmitted ? (
+          {already ? (
             <div
-              className="scale-in"
               style={{
-                background: C.card,
-                borderRadius: 20,
-                border: `1px solid ${C.cardBorder}`,
-                padding: "40px 32px",
-                textAlign: "center",
-                maxWidth: 440,
                 width: "100%",
+                maxWidth: 440,
+                textAlign: "center",
+                background: P.surface,
+                border: `1px solid ${P.border}`,
+                borderRadius: 24,
+                padding: "48px 32px",
+                animation: "scaleIn 0.4s ease",
               }}
             >
               <div
                 style={{
                   width: 64,
                   height: 64,
-                  borderRadius: 18,
-                  background: C.accentLight,
-                  border: `1px solid rgba(212,168,83,0.25)`,
+                  borderRadius: "50%",
+                  background: P.goldDim,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   margin: "0 auto 20px",
-                  fontSize: 28,
-                  fontFamily: display,
-                  color: C.accent,
+                  border: `1px solid ${P.gold}44`,
                 }}
               >
-                GO
+                <svg
+                  width="24"
+                  height="18"
+                  viewBox="0 0 24 18"
+                  fill="none"
+                >
+                  <path
+                    d="M2 9l7 7 13-13"
+                    stroke={P.gold}
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </div>
               <h3
                 style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: "#fff",
-                  marginBottom: 8,
                   fontFamily: display,
+                  fontSize: 24,
+                  color: P.text,
+                  marginBottom: 8,
+                  fontWeight: 600,
                 }}
               >
-                Already in the gallery.
+                Already in.
               </h3>
               <p
                 style={{
-                  fontSize: 14,
-                  color: C.textMuted,
-                  lineHeight: 1.7,
                   fontFamily: body,
+                  fontSize: 14,
+                  color: P.muted,
+                  lineHeight: 1.6,
                 }}
               >
-                You've already secured your whitelist spot. No need to
-                submit again.
+                Your whitelist spot is locked. No need to apply again.
               </p>
             </div>
           ) : (
-            <WhitelistModal onClose={() => setModalOpen(false)} />
+            <Whitelist onClose={() => setModalOpen(false)} />
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ── FAQ Item ── */
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderBottom: `1px solid ${P.border}` }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: "100%",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "20px 0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: body,
+            fontSize: 15,
+            fontWeight: 600,
+            color: open ? P.text : P.muted,
+            textAlign: "left",
+            transition: "color 0.2s",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {q}
+        </span>
+        <span
+          style={{
+            color: P.gold,
+            fontSize: 18,
+            fontFamily: display,
+            flexShrink: 0,
+            transition: "transform 0.25s",
+            transform: open ? "rotate(45deg)" : "rotate(0)",
+          }}
+        >
+          +
+        </span>
+      </button>
+      {open && (
+        <p
+          style={{
+            fontFamily: body,
+            fontSize: 14,
+            color: P.muted,
+            padding: "0 0 20px",
+            margin: 0,
+            lineHeight: 1.7,
+            animation: "fadeIn 0.2s ease",
+          }}
+        >
+          {a}
+        </p>
       )}
     </div>
   );
