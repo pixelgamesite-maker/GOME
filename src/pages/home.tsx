@@ -6,19 +6,27 @@ import { SafeImage } from "@/components/SafeImage";
 
 const P = {
   bg: "#070707", bgElevated: "#0e0e0e", surface: "#141414",
-  border: "rgba(255,255,255,0.06)", gold: "#C9A84C", goldDim: "rgba(201,168,76,0.15)",
+  border: "rgba(255,255,255,0.06)",
   text: "#f5f5f5", muted: "rgba(255,255,255,0.4)", dim: "rgba(255,255,255,0.15)",
   pepe: "#3ddc52", brett: "#3b82f6", bonk: "#f97316",
 };
 
 const display = "'Fredoka', sans-serif";
 const body = "'Space Grotesk', sans-serif";
+const ringGradient = `conic-gradient(${P.pepe}, ${P.brett}, ${P.bonk}, ${P.pepe})`;
+const brandGradientText: React.CSSProperties = {
+  background: `linear-gradient(90deg, ${P.pepe}, ${P.brett}, ${P.bonk})`,
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  color: "transparent",
+};
 
 const TASKS = [
   { id: "follow", label: "Follow @GomeJpeg", points: 50, url: "https://x.com/GomeJpeg", color: P.pepe },
   { id: "like", label: "Like Pinned Tweet", points: 10, url: "https://x.com/i/status/2070602933767389663", color: P.brett },
   { id: "retweet", label: "Retweet Pinned Tweet", points: 20, url: "https://x.com/i/status/2070602933767389663", color: P.bonk },
-  { id: "comment", label: "Comment & Tag 2 Frens", points: 20, url: "https://x.com/i/status/2070602933767389663", color: P.gold },
+  { id: "comment", label: "Comment & Tag 2 Frens", points: 20, url: "https://x.com/i/status/2070602933767389663", color: P.pepe },
 ];
 
 /* ── Types ── */
@@ -79,7 +87,7 @@ export default function Home() {
   const handle = meta.preferred_username || meta.user_name || "anon";
 
   return (
-    <div style={{ background: P.bg, minHeight: "100vh", color: P.text, fontFamily: body }}>
+    <div style={{ background: P.bg, minHeight: "100vh", color: P.text, fontFamily: body, overflowX: "hidden" }}>
       {/* Nav */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 50, height: 72,
@@ -93,12 +101,15 @@ export default function Home() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{
-            fontFamily: display, fontSize: 14, color: P.gold,
-            background: P.goldDim, padding: "6px 14px", borderRadius: 20,
+            fontFamily: display, fontSize: 14, color: P.text,
+            background: "rgba(255,255,255,0.06)", border: `1px solid ${P.border}`,
+            padding: "6px 14px", borderRadius: 20,
           }}>
             {totalPoints} pts
           </span>
-          <img src={avatar} alt="avatar" style={{ width: 32, height: 32, borderRadius: "50%", border: `2px solid ${P.gold}` }} />
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: ringGradient, padding: 2 }}>
+            <img src={avatar} alt="avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", display: "block", border: `2px solid ${P.bg}` }} />
+          </div>
           <button onClick={signOut} style={{
             fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em",
             color: P.muted, background: "transparent", border: "none", cursor: "pointer",
@@ -106,27 +117,81 @@ export default function Home() {
         </div>
       </nav>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "40px 24px" }}>
-        {/* Welcome */}
-        <div style={{
-          background: P.surface, border: `1px solid ${P.border}`, borderRadius: 20,
-          padding: 28, marginBottom: 32, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap",
+      {/* ───────── HERO ───────── */}
+      <section style={{
+        position: "relative", padding: "64px 24px 56px", textAlign: "center",
+        overflow: "hidden", isolation: "isolate",
+      }}>
+        {/* ambient color blobs */}
+        <div style={{ position: "absolute", top: -80, left: "8%", width: 260, height: 260, borderRadius: "50%", background: P.pepe, opacity: 0.16, filter: "blur(70px)", zIndex: -1 }} />
+        <div style={{ position: "absolute", top: -40, right: "10%", width: 220, height: 220, borderRadius: "50%", background: P.brett, opacity: 0.18, filter: "blur(70px)", zIndex: -1 }} />
+        <div style={{ position: "absolute", bottom: -60, left: "40%", width: 240, height: 240, borderRadius: "50%", background: P.bonk, opacity: 0.14, filter: "blur(70px)", zIndex: -1 }} />
+
+        <SafeImage src="/GOME-HERO.png" alt="GOME" style={{ height: 180, margin: "0 auto 8px", display: "block" }} />
+
+        <h1 style={{
+          ...brandGradientText, fontFamily: display, fontSize: "clamp(40px, 8vw, 64px)",
+          fontWeight: 700, margin: "0 0 10px", lineHeight: 1,
         }}>
-          <img src={avatar} style={{ width: 64, height: 64, borderRadius: "50%", border: `3px solid ${P.gold}` }} alt="" />
-          <div>
-            <h2 style={{ fontFamily: display, fontSize: 22, margin: "0 0 4px" }}>Welcome, @{handle}</h2>
-            <p style={{ margin: 0, color: P.muted, fontSize: 14 }}>
-              Rank <strong style={{ color: P.gold }}>#{rank ?? "—"}</strong> · Top 1000 get GTD mint
-            </p>
-          </div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 10 }}>
-            <button onClick={() => navigate("/gallery")} style={navBtn(P.pepe)}>Gallery</button>
-            <button onClick={() => navigate("/leaderboard")} style={navBtn(P.brett)}>Leaderboard</button>
-            <button onClick={() => navigate("/collab")} style={navBtn(P.bonk)}>Collab</button>
-          </div>
+          BASE CAMP
+        </h1>
+        <p style={{ color: P.muted, fontSize: 15, maxWidth: 480, margin: "0 auto 28px" }}>
+          Where the GOME crew links up, knocks out quests, and climbs the ranks toward mint day.
+        </p>
+
+        <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", marginBottom: 28 }}>
+          <button onClick={() => navigate("/gallery")} style={navBtn(P.pepe)}>Gallery</button>
+          <button onClick={() => navigate("/leaderboard")} style={navBtn(P.brett)}>Leaderboard</button>
+          <button onClick={() => navigate("/collab")} style={navBtn(P.bonk)}>Collab</button>
         </div>
 
-        {/* Tasks */}
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 14, background: P.surface,
+          border: `1px solid ${P.border}`, borderRadius: 40, padding: "10px 20px 10px 10px",
+        }}>
+          <div style={{ width: 44, height: 44, borderRadius: "50%", background: ringGradient, padding: 2 }}>
+            <img src={avatar} style={{ width: "100%", height: "100%", borderRadius: "50%", display: "block", border: `2px solid ${P.surface}` }} alt="" />
+          </div>
+          <div style={{ textAlign: "left" }}>
+            <p style={{ margin: 0, fontFamily: display, fontSize: 14 }}>@{handle}</p>
+            <p style={{ margin: 0, fontSize: 12, color: P.muted }}>
+              Rank <strong style={{ ...brandGradientText, fontWeight: 700 }}>#{rank ?? "—"}</strong> · Top 1000 get GTD mint
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "0 24px 24px" }}>
+
+        {/* ───────── MEET THE CREW ───────── */}
+        <p style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase",
+          color: P.dim, textAlign: "center", margin: "8px 0 6px",
+        }}>Meet the Crew</p>
+        <h2 style={{ fontFamily: display, fontSize: 28, textAlign: "center", margin: "0 0 36px" }}>
+          Three faces. One pack.
+        </h2>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 48 }}>
+          <MascotPanel
+            color={P.pepe} name="PEPE" tag="The OG"
+            blurb="Green energy, infinite vibes. Pepe's been here since before it was cool, and he's not leaving now."
+            img="/PEPE.PNG" thumbs={["/pepe-1.jpg"]}
+          />
+          <MascotPanel
+            color={P.brett} name="BRETT" tag="The Face"
+            blurb="Blue blood, big plans. Brett's the reason the chart never sleeps."
+            img="/BRETT.PNG" thumbs={["/brett-1.jpg", "/brett-2.jpg", "/brett-3.jpg"]}
+            reverse
+          />
+          <MascotPanel
+            color={P.bonk} name="BONK" tag="The Wildcard"
+            blurb="Orange and unpredictable. Bonk shows up, stirs the pot, and vanishes before the screenshots."
+            img="/BONK.PNG"
+          />
+        </div>
+
+        {/* ───────── TASKS ───────── */}
         <h3 style={{ fontFamily: display, fontSize: 20, marginBottom: 16 }}>Collect Points</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, marginBottom: 40 }}>
           {TASKS.map((t) => {
@@ -134,7 +199,7 @@ export default function Home() {
             return (
               <div key={t.id} style={{
                 background: P.surface, border: `1px solid ${P.border}`, borderRadius: 16,
-                padding: 24, transition: "all 0.2s",
+                padding: 24, borderTop: `3px solid ${t.color}`, transition: "all 0.2s",
               }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                   <span style={{ fontFamily: display, fontSize: 16, fontWeight: 600 }}>{t.label}</span>
@@ -166,11 +231,11 @@ export default function Home() {
           })}
         </div>
 
-        {/* Progress */}
+        {/* ───────── PROGRESS ───────── */}
         <div style={{ background: P.surface, border: `1px solid ${P.border}`, borderRadius: 16, padding: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <span style={{ fontSize: 13, color: P.muted }}>Your Progress</span>
-            <span style={{ fontSize: 13, color: P.gold, fontWeight: 700 }}>{totalPoints} / 100 pts</span>
+            <span style={{ fontSize: 13, fontWeight: 700, ...brandGradientText }}>{totalPoints} / 100 pts</span>
           </div>
           <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 10, overflow: "hidden" }}>
             <div style={{
@@ -183,6 +248,55 @@ export default function Home() {
             Complete all tasks to maximize your rank. Top 1000 wallets are guaranteed mint.
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Mascot panel: alternating image / copy block, themed per character ── */
+function MascotPanel({
+  color, name, tag, blurb, img, thumbs, reverse,
+}: {
+  color: string; name: string; tag: string; blurb: string; img: string;
+  thumbs?: string[]; reverse?: boolean;
+}) {
+  return (
+    <div style={{
+      display: "flex", flexWrap: "wrap", alignItems: "center", gap: 28,
+      flexDirection: reverse ? "row-reverse" : "row",
+      background: `linear-gradient(${reverse ? 165 : 195}deg, ${color}1a, ${P.surface} 65%)`,
+      border: `1px solid ${P.border}`, borderRadius: 28, padding: 28, position: "relative", overflow: "hidden",
+    }}>
+      <div style={{
+        position: "absolute", width: 220, height: 220, borderRadius: "50%", background: color,
+        opacity: 0.18, filter: "blur(60px)", top: "50%", left: reverse ? "auto" : "8%", right: reverse ? "8%" : "auto",
+        transform: "translateY(-50%)", zIndex: 0,
+      }} />
+
+      <div style={{ flex: "1 1 220px", display: "flex", justifyContent: "center", position: "relative", zIndex: 1 }}>
+        <SafeImage src={img} alt={name} style={{ height: 180, objectFit: "contain" }} />
+      </div>
+
+      <div style={{ flex: "1 1 260px", position: "relative", zIndex: 1 }}>
+        <span style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase",
+          color, background: `${color}1f`, border: `1px solid ${color}55`, borderRadius: 20, padding: "4px 12px",
+        }}>{tag}</span>
+        <h3 style={{ fontFamily: display, fontSize: 30, color, margin: "12px 0 8px" }}>{name}</h3>
+        <p style={{ color: P.muted, fontSize: 14, lineHeight: 1.6, margin: 0 }}>{blurb}</p>
+
+        {thumbs && thumbs.length > 0 && (
+          <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+            {thumbs.map((src) => (
+              <div key={src} style={{
+                width: 60, height: 60, borderRadius: 12, overflow: "hidden",
+                border: `1px solid ${color}55`, flexShrink: 0,
+              }}>
+                <SafeImage src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
