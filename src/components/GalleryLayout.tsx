@@ -14,13 +14,13 @@ const display = "'Fredoka', sans-serif";
 const body = "'Space Grotesk', sans-serif";
 
 export const GALLERY_PAGES = [
-  { id: "pepe", label: "PEPE", path: "/gallery/pepe", color: P.pepe, emoji: "🐸", img: "/pepe.gif" },
-  { id: "brett", label: "BRETT", path: "/gallery/brett", color: P.brett, emoji: "🟦", img: "/brett.gif" },
-  { id: "bonk", label: "BONK", path: "/gallery/bonk", color: P.bonk, emoji: "🟠", img: "/bonk.gif" },
-  { id: "lore", label: "Lore", path: "/gallery/lore", color: P.gold, emoji: "📜", img: "/GOME-LOGO.png" },
-  { id: "whitelist", label: "Whitelist", path: "/gallery/whitelist", color: "#a855f7", emoji: "✦", img: "/whitelist.gif" },
-  { id: "memegenerator", label: "Meme Gen", path: "/gallery/memegenerator", color: P.dim, emoji: "🚧", soon: true, img: "/memegenerator.gif" },
-  { id: "museum", label: "Museum", path: "/gallery/museum", color: P.dim, emoji: "🏛️", soon: true, img: "/museum.gif" },
+  { id: "pepe", label: "PEPE", path: "/gallery/pepe", color: P.pepe, emoji: "🐸", img: "/pepe.gif", tag: "OG frog energy" },
+  { id: "brett", label: "BRETT", path: "/gallery/brett", color: P.brett, emoji: "🟦", img: "/brett.gif", tag: "Money never sleeps" },
+  { id: "bonk", label: "BONK", path: "/gallery/bonk", color: P.bonk, emoji: "🟠", img: "/bonk.gif", tag: "Unhinged & orange" },
+  { id: "lore", label: "Lore", path: "/gallery/lore", color: P.gold, emoji: "📜", img: "/GOME-LOGO.png", tag: "The full story" },
+  { id: "whitelist", label: "Whitelist", path: "/gallery/whitelist", color: "#a855f7", emoji: "✦", img: "/whitelist.gif", tag: "Secure your spot" },
+  { id: "memegenerator", label: "Meme Gen", path: "/gallery/memegenerator", color: P.dim, emoji: "🚧", soon: true, img: "/memegenerator.gif", tag: "Coming Season 1" },
+  { id: "museum", label: "Museum", path: "/gallery/museum", color: P.dim, emoji: "🏛️", soon: true, img: "/museum.gif", tag: "Coming Season 1" },
 ];
 
 export default function GalleryLayout({ children, pageId }: { children: React.ReactNode; pageId: string }) {
@@ -34,7 +34,8 @@ export default function GalleryLayout({ children, pageId }: { children: React.Re
     <div style={{ minHeight: "100vh", background: P.bg, color: P.text, fontFamily: body, display: "flex", flexDirection: "column" }}>
       {/* Top Bar */}
       <div style={{
-        height: 64, padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
+        position: "sticky", top: 0, zIndex: 50, height: 64, padding: "0 20px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
         background: "rgba(7,7,7,0.95)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${P.border}`,
         flexShrink: 0,
       }}>
@@ -57,108 +58,91 @@ export default function GalleryLayout({ children, pageId }: { children: React.Re
         </div>
       </div>
 
-      {/* Body: Sidebar + Content */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        {/* Vertical Card Sidebar — free scroll, no arrows */}
-        <div style={{
-          width: 248, flexShrink: 0, background: P.bgElevated,
-          borderRight: `1px solid ${P.border}`, padding: "20px 14px",
-          display: "flex", flexDirection: "column", gap: 14, overflowY: "auto",
-        }}>
-          <p style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase",
-            color: P.dim, padding: "0 4px", marginBottom: 2,
-          }}>Navigate</p>
+      {/* Single column, free-scrolling page */}
+      <div style={{ flex: 1, padding: "20px 16px 40px" }}>
+        <div style={{ maxWidth: 560, margin: "0 auto" }}>
 
-          {GALLERY_PAGES.map((p) => {
-            const active = p.id === pageId;
-            return (
-              <button
-                key={p.id}
-                onClick={() => !p.soon && navigate(p.path)}
-                style={{
-                  display: "flex", flexDirection: "column", width: "100%",
-                  borderRadius: 18, overflow: "hidden", padding: 0,
-                  textAlign: "left", cursor: p.soon ? "not-allowed" : "pointer",
-                  background: active ? `linear-gradient(165deg, ${p.color}22, ${P.surface} 75%)` : P.surface,
-                  border: active ? `1.5px solid ${p.color}` : `1px solid ${P.border}`,
-                  transition: "border-color 0.2s, transform 0.15s",
-                }}
-                onMouseEnter={(e) => { if (!p.soon) e.currentTarget.style.transform = "translateY(-2px)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}
-              >
-                {/* Image box */}
-                <div style={{
-                  width: "100%", height: 104, background: "#000",
-                  position: "relative", overflow: "hidden",
-                }}>
-                  <img
-                    src={p.img}
-                    alt={p.label}
-                    style={{
-                      width: "100%", height: "100%", objectFit: "cover",
-                      filter: p.soon ? "grayscale(0.6) brightness(0.6)" : "none",
-                      opacity: p.soon ? 0.7 : 1,
-                    }}
-                  />
-                  {active && (
-                    <div style={{
-                      position: "absolute", inset: 0,
-                      boxShadow: `inset 0 0 0 1.5px ${p.color}`,
-                    }} />
-                  )}
-                </div>
+          {/* Current page content, if any */}
+          {meta && (
+            <div style={{
+              background: P.surface, borderRadius: 24, border: `1px solid ${P.border}`,
+              padding: 28, position: "relative", marginBottom: 28,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+            }}>
+              <div style={{ position: "absolute", top: 0, left: 0, width: 24, height: 24, borderTop: `3px solid ${meta.color}`, borderLeft: `3px solid ${meta.color}`, borderTopLeftRadius: 20 }} />
+              <div style={{ position: "absolute", top: 0, right: 0, width: 24, height: 24, borderTop: `3px solid ${meta.color}`, borderRight: `3px solid ${meta.color}`, borderTopRightRadius: 20 }} />
+              <div style={{ position: "absolute", bottom: 0, left: 0, width: 24, height: 24, borderBottom: `3px solid ${meta.color}`, borderLeft: `3px solid ${meta.color}`, borderBottomLeftRadius: 20 }} />
+              <div style={{ position: "absolute", bottom: 0, right: 0, width: 24, height: 24, borderBottom: `3px solid ${meta.color}`, borderRight: `3px solid ${meta.color}`, borderBottomRightRadius: 20 }} />
 
-                {/* Label row */}
-                <div style={{
-                  padding: "10px 12px 12px", display: "flex",
-                  flexDirection: "column", gap: 6,
-                }}>
-                  <span style={{
-                    fontFamily: display, fontSize: 14, fontWeight: 600,
-                    color: active ? p.color : p.soon ? P.dim : P.text,
-                  }}>
-                    {p.label}
-                  </span>
-
-                  {p.soon && (
-                    <span style={{
-                      display: "inline-flex", alignSelf: "flex-start", alignItems: "center", gap: 4,
-                      fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
-                      color: P.dim, background: "rgba(255,255,255,0.04)",
-                      border: `1px solid ${P.border}`, borderRadius: 20, padding: "3px 9px",
-                    }}>
-                      🔒 Coming Soon
-                    </span>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Main Content — Free Scroll */}
-        <div style={{ flex: 1, overflowY: "auto", padding: 28, position: "relative" }}>
-          {/* Metallic Frame */}
-          <div style={{
-            maxWidth: 1000, margin: "0 auto", minHeight: "100%",
-            background: P.surface, borderRadius: 24, border: `1px solid ${P.border}`,
-            padding: 32, position: "relative",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-          }}>
-            {/* Corner accents */}
-            <div style={{ position: "absolute", top: 0, left: 0, width: 24, height: 24, borderTop: `3px solid ${meta?.color || P.gold}`, borderLeft: `3px solid ${meta?.color || P.gold}`, borderTopLeftRadius: 20 }} />
-            <div style={{ position: "absolute", top: 0, right: 0, width: 24, height: 24, borderTop: `3px solid ${meta?.color || P.gold}`, borderRight: `3px solid ${meta?.color || P.gold}`, borderTopRightRadius: 20 }} />
-            <div style={{ position: "absolute", bottom: 0, left: 0, width: 24, height: 24, borderBottom: `3px solid ${meta?.color || P.gold}`, borderLeft: `3px solid ${meta?.color || P.gold}`, borderBottomLeftRadius: 20 }} />
-            <div style={{ position: "absolute", bottom: 0, right: 0, width: 24, height: 24, borderBottom: `3px solid ${meta?.color || P.gold}`, borderRight: `3px solid ${meta?.color || P.gold}`, borderBottomRightRadius: 20 }} />
-
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ fontFamily: display, fontSize: 24, color: meta?.color || P.gold, margin: 0 }}>
-                {meta?.emoji} {meta?.label}
+              <h2 style={{ fontFamily: display, fontSize: 24, color: meta.color, margin: "0 0 20px" }}>
+                {meta.emoji} {meta.label}
               </h2>
+              {children}
             </div>
+          )}
 
-            {children}
+          <p style={{
+            fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase",
+            color: P.dim, padding: "0 4px", marginBottom: 14,
+          }}>
+            {meta ? "More from the Gallery" : "Navigate"}
+          </p>
+
+          {/* Vertical, tap-to-navigate cards — free scroll, no arrows */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            {GALLERY_PAGES.filter((p) => p.id !== pageId).map((p) => {
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => !p.soon && navigate(p.path)}
+                  style={{
+                    display: "flex", flexDirection: "column", width: "100%",
+                    borderRadius: 28, overflow: "hidden", padding: 0, border: "none",
+                    textAlign: "left", cursor: p.soon ? "not-allowed" : "pointer",
+                    background: `linear-gradient(165deg, ${p.color}26 0%, ${P.surface} 60%)`,
+                    boxShadow: `inset 0 0 0 1px ${P.border}`,
+                  }}
+                >
+                  {/* Image */}
+                  <div style={{ width: "100%", height: 220, background: "#000", overflow: "hidden" }}>
+                    <img
+                      src={p.img}
+                      alt={p.label}
+                      style={{
+                        width: "100%", height: "100%", objectFit: "cover",
+                        filter: p.soon ? "grayscale(0.6) brightness(0.55)" : "none",
+                      }}
+                    />
+                  </div>
+
+                  {/* Label */}
+                  <div style={{
+                    padding: "18px 20px 22px", display: "flex",
+                    alignItems: "center", justifyContent: "space-between", gap: 12,
+                  }}>
+                    <div>
+                      <h3 style={{ fontFamily: display, fontSize: 22, margin: "0 0 4px", color: p.soon ? P.dim : p.color }}>
+                        {p.emoji} {p.label}
+                      </h3>
+                      <p style={{ margin: 0, fontSize: 13, color: P.muted }}>{p.tag}</p>
+                    </div>
+
+                    {p.soon ? (
+                      <span style={{
+                        flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4,
+                        fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
+                        color: P.dim, background: "rgba(255,255,255,0.04)",
+                        border: `1px solid ${P.border}`, borderRadius: 20, padding: "6px 12px",
+                      }}>
+                        🔒 Soon
+                      </span>
+                    ) : (
+                      <span style={{ flexShrink: 0, fontSize: 18, color: p.color }}>→</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
