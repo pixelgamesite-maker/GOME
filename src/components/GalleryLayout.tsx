@@ -14,13 +14,13 @@ const display = "'Fredoka', sans-serif";
 const body = "'Space Grotesk', sans-serif";
 
 export const GALLERY_PAGES = [
-  { id: "pepe", label: "PEPE", path: "/gallery/pepe", color: P.pepe, emoji: "🐸" },
-  { id: "brett", label: "BRETT", path: "/gallery/brett", color: P.brett, emoji: "🟦" },
-  { id: "bonk", label: "BONK", path: "/gallery/bonk", color: P.bonk, emoji: "🟠" },
-  { id: "lore", label: "Lore", path: "/gallery/lore", color: P.gold, emoji: "📜" },
-  { id: "whitelist", label: "Whitelist", path: "/gallery/whitelist", color: "#a855f7", emoji: "✦" },
-  { id: "memegenerator", label: "Meme Gen", path: "/gallery/memegenerator", color: P.dim, emoji: "🚧", soon: true },
-  { id: "museum", label: "Museum", path: "/gallery/museum", color: P.dim, emoji: "🏛️", soon: true },
+  { id: "pepe", label: "PEPE", path: "/gallery/pepe", color: P.pepe, emoji: "🐸", img: "/pepe.gif" },
+  { id: "brett", label: "BRETT", path: "/gallery/brett", color: P.brett, emoji: "🟦", img: "/brett.gif" },
+  { id: "bonk", label: "BONK", path: "/gallery/bonk", color: P.bonk, emoji: "🟠", img: "/bonk.gif" },
+  { id: "lore", label: "Lore", path: "/gallery/lore", color: P.gold, emoji: "📜", img: "/GOME-LOGO.png" },
+  { id: "whitelist", label: "Whitelist", path: "/gallery/whitelist", color: "#a855f7", emoji: "✦", img: "/whitelist.gif" },
+  { id: "memegenerator", label: "Meme Gen", path: "/gallery/memegenerator", color: P.dim, emoji: "🚧", soon: true, img: "/memegenerator.gif" },
+  { id: "museum", label: "Museum", path: "/gallery/museum", color: P.dim, emoji: "🏛️", soon: true, img: "/museum.gif" },
 ];
 
 export default function GalleryLayout({ children, pageId }: { children: React.ReactNode; pageId: string }) {
@@ -59,16 +59,17 @@ export default function GalleryLayout({ children, pageId }: { children: React.Re
 
       {/* Body: Sidebar + Content */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        {/* Vertical Sidebar */}
+        {/* Vertical Card Sidebar — free scroll, no arrows */}
         <div style={{
-          width: 220, flexShrink: 0, background: P.bgElevated,
+          width: 248, flexShrink: 0, background: P.bgElevated,
           borderRight: `1px solid ${P.border}`, padding: "20px 14px",
-          display: "flex", flexDirection: "column", gap: 6, overflowY: "auto",
+          display: "flex", flexDirection: "column", gap: 14, overflowY: "auto",
         }}>
           <p style={{
             fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase",
-            color: P.dim, padding: "0 10px", marginBottom: 8,
+            color: P.dim, padding: "0 4px", marginBottom: 2,
           }}>Navigate</p>
+
           {GALLERY_PAGES.map((p) => {
             const active = p.id === pageId;
             return (
@@ -76,19 +77,61 @@ export default function GalleryLayout({ children, pageId }: { children: React.Re
                 key={p.id}
                 onClick={() => !p.soon && navigate(p.path)}
                 style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "12px 10px", borderRadius: 12, border: "none", width: "100%",
-                  background: active ? `${p.color}15` : "transparent",
-                  color: active ? p.color : p.soon ? P.dim : P.text,
-                  cursor: p.soon ? "not-allowed" : "pointer",
-                  transition: "all 0.2s", textAlign: "left",
-                  fontFamily: body, fontSize: 13, fontWeight: 700,
-                  borderLeft: active ? `3px solid ${p.color}` : "3px solid transparent",
+                  display: "flex", flexDirection: "column", width: "100%",
+                  borderRadius: 18, overflow: "hidden", padding: 0,
+                  textAlign: "left", cursor: p.soon ? "not-allowed" : "pointer",
+                  background: active ? `linear-gradient(165deg, ${p.color}22, ${P.surface} 75%)` : P.surface,
+                  border: active ? `1.5px solid ${p.color}` : `1px solid ${P.border}`,
+                  transition: "border-color 0.2s, transform 0.15s",
                 }}
+                onMouseEnter={(e) => { if (!p.soon) e.currentTarget.style.transform = "translateY(-2px)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}
               >
-                <span style={{ fontSize: 16 }}>{p.emoji}</span>
-                <span style={{ flex: 1 }}>{p.label}</span>
-                {p.soon && <span style={{ fontSize: 9, color: P.dim, fontWeight: 600 }}>SOON</span>}
+                {/* Image box */}
+                <div style={{
+                  width: "100%", height: 104, background: "#000",
+                  position: "relative", overflow: "hidden",
+                }}>
+                  <img
+                    src={p.img}
+                    alt={p.label}
+                    style={{
+                      width: "100%", height: "100%", objectFit: "cover",
+                      filter: p.soon ? "grayscale(0.6) brightness(0.6)" : "none",
+                      opacity: p.soon ? 0.7 : 1,
+                    }}
+                  />
+                  {active && (
+                    <div style={{
+                      position: "absolute", inset: 0,
+                      boxShadow: `inset 0 0 0 1.5px ${p.color}`,
+                    }} />
+                  )}
+                </div>
+
+                {/* Label row */}
+                <div style={{
+                  padding: "10px 12px 12px", display: "flex",
+                  flexDirection: "column", gap: 6,
+                }}>
+                  <span style={{
+                    fontFamily: display, fontSize: 14, fontWeight: 600,
+                    color: active ? p.color : p.soon ? P.dim : P.text,
+                  }}>
+                    {p.label}
+                  </span>
+
+                  {p.soon && (
+                    <span style={{
+                      display: "inline-flex", alignSelf: "flex-start", alignItems: "center", gap: 4,
+                      fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
+                      color: P.dim, background: "rgba(255,255,255,0.04)",
+                      border: `1px solid ${P.border}`, borderRadius: 20, padding: "3px 9px",
+                    }}>
+                      🔒 Coming Soon
+                    </span>
+                  )}
+                </div>
               </button>
             );
           })}
