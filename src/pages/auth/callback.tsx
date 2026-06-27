@@ -20,13 +20,14 @@ export default function AuthCallback() {
       const avatarUrl = meta.avatar_url || meta.profile_image_url || null;
       const twitterId = meta.provider_id || meta.sub || null;
 
-      // 1. Upsert player profile
-      const { error: upsertError } = await supabase.from("players").upsert({
+      // Upsert into profiles (GOME table)
+      const { error: upsertError } = await supabase.from("profiles").upsert({
         id: u.id,
         twitter_id: twitterId,
         username: username,
         display_name: displayName,
         avatar_url: avatarUrl,
+        points_total: 0,
       }, { onConflict: "id", ignoreDuplicates: false });
 
       if (upsertError) {
@@ -35,35 +36,9 @@ export default function AuthCallback() {
         return;
       }
 
-      // 2. Check for pending referral from URL
-      // Try sessionStorage first, then fallback to URL params directly
-      let pendingRef = sessionStorage.getItem("pending_referral");
-      
-      if (!pendingRef && typeof window !== "undefined") {
-        const params = new URLSearchParams(window.location.search);
-        pendingRef = params.get("ref") || null;
-      }
-
-      if (pendingRef) {
-        console.log("Applying referral:", pendingRef);
-        const { data, error } = await supabase.rpc("apply_referral", { 
-          p_code: pendingRef.toUpperCase() 
-        });
-        
-        if (error) {
-          console.error("Referral RPC error:", error.message);
-        } else if (data?.success) {
-          console.log("Referral applied! Bonus:", data.bonus);
-          sessionStorage.removeItem("pending_referral");
-        } else {
-          console.log("Referral failed:", data?.error);
-        }
-      }
-
-      navigate("/hunt");
+      navigate("/home");
     };
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === "SIGNED_IN" && session) {
@@ -72,11 +47,8 @@ export default function AuthCallback() {
       }
     );
 
-    // Fallback: check if session already exists
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        processAuth(data.session);
-      }
+      if (data.session) processAuth(data.session);
     });
 
     const timeout = setTimeout(() => {
@@ -90,18 +62,25 @@ export default function AuthCallback() {
   }, [navigate]);
 
   if (failed) return (
-    <div className="min-h-[100dvh] bg-[#04020c] flex flex-col items-center justify-center gap-4">
-      <p className="font-['Press_Start_2P'] text-[10px] text-red-500 tracking-widest">AUTH FAILED</p>
+    <div className="min-h-[100dvh] bg-[#070707] flex flex-col items-center justify-center gap-4">
+      <p style={{ fontFamily: "'Fredoka', sans-serif", color: "#ef4444", fontSize: 14 }}>
+        AUTH FAILED
+      </p>
       <button onClick={() => navigate("/")}
-        className="font-['Press_Start_2P'] text-[8px] text-[#a855f7] bg-transparent border-2 border-[#3b1d6e] px-6 py-2">
-        RETURN
+        className="px-6 py-2 rounded-lg border border-[#C9A84C]/30 text-[#C9A84C] text-xs font-bold uppercase tracking-widest hover:bg-[#C9A84C]/10">
+        Return
       </button>
     </div>
   );
 
   return (
-    <div className="min-h-[100dvh] bg-[#04020c] flex items-center justify-center">
-      <p className="font-['Press_Start_2P'] text-[9px] text-[#3b1d6e] tracking-[0.2em]">ENTERING REALM...</p>
+    <div className="min-h-[100dvh] bg-[#070707] flex items-center justify-center">
+      <p style={{
+        fontFamily: "'Space Grotesk', sans-serif",
+        fontSize: 12, color: "#C9A84C", letterSpacing: "0.2em", textTransform: "uppercase"
+      }}>
+        Entering the Gallery...
+      </p>
     </div>
   );
-  }
+}
