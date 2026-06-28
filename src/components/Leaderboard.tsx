@@ -20,8 +20,8 @@ const P = {
   text: "#f5f5f5", muted: "rgba(255,255,255,0.45)", dim: "rgba(255,255,255,0.18)",
   gold: "#C9A84C", silver: "#9ca3af", bronze: "#cd7f32",
 };
-const serif = "'Playfair Display', serif";
-const body = "'Space Grotesk', sans-serif";
+const serif = "'Permanent Marker', cursive";
+const body = "'Space Mono', monospace";
 
 type Row = { id: string; username: string | null; avatar_url: string | null; points_total: number; created_at: string };
 
