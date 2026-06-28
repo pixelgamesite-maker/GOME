@@ -24,7 +24,7 @@ const P = { bg: "#070707", gold: "#C9A84C", text: "#f5f5f5" };
 function App() {
   return (
     <div className="dark">
-      {/* LanguageProvider wraps everything so the EN/中文/日本語 choice
+      {/* LanguageProvider wraps everything so the EN/中文/한국어 choice
           persists across every route, not just Home */}
       <LanguageProvider>
         <TooltipProvider>
