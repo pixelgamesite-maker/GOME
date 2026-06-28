@@ -72,30 +72,13 @@ export default function Leaderboard({ limit = 100, showViewAll = false }: { limi
 
   return (
     <div style={{ fontFamily: body, color: P.text }}>
-      {/* Your rank — always visible, even outside the visible list */}
-      {user && (
-        <div style={{
-          display: "inline-flex", alignItems: "center", gap: 10, margin: "0 auto 28px",
-          background: P.surface, border: `1px solid ${P.border}`, borderRadius: 30,
-          padding: "10px 20px",
-        }}>
-          <span style={{ fontSize: 13, color: P.muted }}>{t("lb.yourRank")}</span>
-          <span style={{ fontFamily: serif, fontSize: 16, color: P.gold, fontWeight: 700 }}>
-            #{myRank ?? "—"}
-          </span>
-          <span style={{ fontSize: 13, color: P.muted }}>{t("lb.with")}</span>
-          <span style={{ fontWeight: 700 }}>{myPoints}</span>
-          <span style={{ color: P.gold }}>★</span>
-        </div>
-      )}
-
       {!loading && rows.length === 0 && (
         <p style={{ color: P.muted, fontSize: 13 }}>{t("lb.empty")}</p>
       )}
 
       {/* Podium — top 3 */}
       {rows.length > 0 && (
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 12, marginBottom: 36 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 12, marginBottom: 28 }}>
           {podium.map((r, i) => {
             if (!r) return <div key={i} style={{ width: 110 }} />;
             const place = i === 1 ? 1 : i === 0 ? 2 : 3;
@@ -110,7 +93,7 @@ export default function Leaderboard({ limit = 100, showViewAll = false }: { limi
                 <p style={{ fontSize: 12, fontWeight: 700, margin: "0 0 2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   @{r.username || "anon"}
                 </p>
-                <p style={{ fontSize: 12, color, fontWeight: 700, margin: "0 0 8px" }}>{r.points_total} ★</p>
+                <p style={{ fontSize: 12, color, fontWeight: 700, margin: "0 0 8px" }}>{r.points_total} {t("nav.pts")}</p>
                 <div style={{
                   height, borderRadius: "12px 12px 0 0", background: `${color}26`,
                   border: `1px solid ${color}55`, position: "relative",
@@ -128,6 +111,23 @@ export default function Leaderboard({ limit = 100, showViewAll = false }: { limi
         </div>
       )}
 
+      {/* Your rank — shown after the podium, always visible even if you're outside the visible list */}
+      {user && (
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 10, margin: "0 auto 28px",
+          background: P.surface, border: `1px solid ${P.border}`, borderRadius: 30,
+          padding: "10px 20px",
+        }}>
+          <span style={{ fontSize: 13, color: P.muted }}>{t("lb.yourRank")}</span>
+          <span style={{ fontFamily: serif, fontSize: 16, color: P.gold, fontWeight: 700 }}>
+            #{myRank ?? "—"}
+          </span>
+          <span style={{ fontSize: 13, color: P.muted }}>{t("lb.with")}</span>
+          <span style={{ fontWeight: 700 }}>{myPoints}</span>
+          <span style={{ color: P.gold, fontSize: 12 }}>{t("nav.pts")}</span>
+        </div>
+      )}
+
       {/* Ranked table */}
       {rest.length > 0 && (
         <div style={{ borderRadius: 16, border: `1px solid ${P.border}`, overflow: "hidden" }}>
@@ -136,7 +136,7 @@ export default function Leaderboard({ limit = 100, showViewAll = false }: { limi
             fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: P.muted,
             borderBottom: `1px solid ${P.border}`,
           }}>
-            <span>{t("lb.rank")}</span><span>{t("lb.user")}</span><span style={{ textAlign: "right" }}>{t("lb.stars")}</span>
+            <span>{t("lb.rank")}</span><span>{t("lb.user")}</span><span style={{ textAlign: "right" }}>{t("lb.points")}</span>
           </div>
           {rest.map((r, i) => (
             <div key={r.id} style={{
@@ -155,7 +155,7 @@ export default function Leaderboard({ limit = 100, showViewAll = false }: { limi
                   <p style={{ margin: 0, fontSize: 11, color: P.muted }}>{t("lb.joined", { date: fmtDate(r.created_at) })}</p>
                 </div>
               </div>
-              <span style={{ textAlign: "right", fontWeight: 700, color: P.gold }}>{r.points_total} ★</span>
+              <span style={{ textAlign: "right", fontWeight: 700, color: P.gold }}>{r.points_total}</span>
             </div>
           ))}
         </div>
