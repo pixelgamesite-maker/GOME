@@ -62,7 +62,7 @@ const dict: Record<Lang, Record<string, any>> = {
     lb: {
       yourRank: "Your rank:", with: "with",
       empty: "No rankings yet — be the first to earn points.",
-      rank: "Rank", user: "User", points: "Points", joined: "Joined {date}",
+      rank: "Rank", user: "User", points: "Points", joined: "Joined {date}", you: "You",
       viewAll: "View Full Leaderboard →",
     },
     wl: {
@@ -127,7 +127,7 @@ const dict: Record<Lang, Record<string, any>> = {
     lb: {
       yourRank: "你的排名：", with: "积分",
       empty: "暂无排名 —— 快来赚取第一份积分吧。",
-      rank: "排名", user: "用户", points: "积分", joined: "加入于 {date}",
+      rank: "排名", user: "用户", points: "积分", joined: "加入于 {date}", you: "你",
       viewAll: "查看完整排行榜 →",
     },
     wl: {
@@ -192,7 +192,7 @@ const dict: Record<Lang, Record<string, any>> = {
     lb: {
       yourRank: "내 순위:", with: "포인트",
       empty: "아직 순위가 없습니다 — 첫 포인트를 획득해보세요.",
-      rank: "순위", user: "사용자", points: "포인트", joined: "{date} 가입",
+      rank: "순위", user: "사용자", points: "포인트", joined: "{date} 가입", you: "나",
       viewAll: "전체 리더보드 보기 →",
     },
     wl: {
