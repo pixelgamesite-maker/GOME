@@ -2,23 +2,25 @@ import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { SafeImage } from "@/components/SafeImage";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useLanguage } from "@/lib/i18n";
+import { ArrowRight, Lock } from "lucide-react";
 
 const P = {
   bg: "#070707", bgElevated: "#0e0e0e", surface: "#141414",
-  border: "rgba(255,255,255,0.06)", gold: "#C9A84C",
-  text: "#f5f5f5", muted: "rgba(255,255,255,0.4)", dim: "rgba(255,255,255,0.15)",
+  border: "rgba(255,255,255,0.07)", gold: "#C9A84C",
+  text: "#f5f5f5", muted: "rgba(255,255,255,0.42)", dim: "rgba(255,255,255,0.16)",
   pepe: "#3ddc52", brett: "#3b82f6", bonk: "#f97316",
 };
 
-const display = "'Fredoka', sans-serif";
-const body = "'Space Grotesk', sans-serif";
+const marker = "'Permanent Marker', cursive";
+const mono = "'Space Mono', monospace";
 
 export const GALLERY_PAGES = [
   { id: "pepe", label: "PEPE", path: "/gallery/pepe", color: P.pepe, img: "/pepe.gif", tag: "OG frog energy" },
   { id: "brett", label: "BRETT", path: "/gallery/brett", color: P.brett, img: "/brett.gif", tag: "Money never sleeps" },
   { id: "bonk", label: "BONK", path: "/gallery/bonk", color: P.bonk, img: "/bonk.gif", tag: "Unhinged & orange" },
   { id: "lore", label: "Lore", path: "/gallery/lore", color: P.gold, img: "/GOME-LOGO.png", tag: "The full story" },
-  { id: "whitelist", label: "Whitelist", path: "/gallery/whitelist", color: "#a855f7", img: "/whitelist.gif", tag: "Secure your spot" },
   { id: "memegenerator", label: "Meme Gen", path: "/gallery/memegenerator", color: P.dim, soon: true, img: "/memegenerator.gif", tag: "Coming Season 1" },
   { id: "museum", label: "Museum", path: "/gallery/museum", color: P.dim, soon: true, img: "/museum.gif", tag: "Coming Season 1" },
 ];
@@ -26,48 +28,59 @@ export const GALLERY_PAGES = [
 export default function GalleryLayout({ pageId }: { children?: React.ReactNode; pageId: string }) {
   const { user, signOut } = useAuth();
   const [, navigate] = useLocation();
+  const { t } = useLanguage();
 
   const meta = GALLERY_PAGES.find((p) => p.id === pageId);
   const avatar = user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${user?.id || "x"}`;
+  const accent = meta?.color || P.gold;
 
   return (
-    <div style={{ minHeight: "100vh", background: P.bg, color: P.text, fontFamily: body, display: "flex", flexDirection: "column" }}>
-      {/* Top Bar */}
+    <div style={{ minHeight: "100vh", background: P.bg, color: P.text, fontFamily: mono, display: "flex", flexDirection: "column" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Space+Mono:wght@400;700&display=swap');`}</style>
+
+      {/* Top bar */}
       <div style={{
-        position: "sticky", top: 0, zIndex: 50, height: 64, padding: "0 20px",
+        position: "sticky", top: 0, zIndex: 50, height: 64, padding: "0 16px 0 20px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
         background: "rgba(7,7,7,0.95)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${P.border}`,
-        flexShrink: 0,
+        flexShrink: 0, gap: 12,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => navigate("/home")}>
-          <SafeImage src="/GOME-LOGO.png" alt="GOME" style={{ height: 28, width: 28 }} />
-          <span style={{ fontFamily: display, fontSize: 16, fontWeight: 600 }}>GOME</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flexShrink: 0 }} onClick={() => navigate("/home")}>
+          <SafeImage src="/GOME-LOGO.png" alt="GOME" style={{ height: 26, width: 26 }} />
+          <span style={{ fontFamily: marker, fontSize: 15 }}>GOME</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <LanguageSwitcher />
           <span style={{
-            fontSize: 12, fontWeight: 700, color: P.gold, background: P.surface,
-            padding: "6px 14px", borderRadius: 20, border: `1px solid ${P.border}`,
+            fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase",
+            color: accent, background: `${accent}14`, padding: "6px 14px", borderRadius: 20,
+            border: `1px solid ${accent}40`, transition: "all 0.3s",
           }}>
-            Gallery
+            {t("gallery.badge")}
           </span>
-          <img src={avatar} alt="" style={{ width: 30, height: 30, borderRadius: "50%", border: `2px solid ${meta?.color || P.gold}` }} />
+          <img src={avatar} alt="" style={{ width: 28, height: 28, borderRadius: "50%", border: `2px solid ${accent}`, flexShrink: 0 }} />
           <button onClick={signOut} style={{
             fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em",
             color: P.muted, background: "transparent", border: "none", cursor: "pointer",
-          }}>Out</button>
+          }}>{t("nav.out")}</button>
         </div>
       </div>
 
       {/* The whole page is one animated vertical carousel */}
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}>
-        <GalleryCarousel pageId={pageId} onSelect={(path) => navigate(path)} />
+        <GalleryCarousel pageId={pageId} onSelect={(path) => navigate(path)} t={t} />
       </div>
     </div>
   );
 }
 
-/* ── Beautiful vertical, swipeable, tap-to-navigate carousel ── */
-function GalleryCarousel({ pageId, onSelect }: { pageId: string; onSelect: (path: string) => void }) {
+/* ── Vertical, swipeable, tap-to-navigate carousel ──
+   Single transformed track + plain-flow children, instead of each card
+   individually position:absolute + its own transform. Far more reliable
+   for click/tap hit-testing across browsers. */
+function GalleryCarousel({
+  pageId, onSelect, t,
+}: { pageId: string; onSelect: (path: string) => void; t: (key: string) => string }) {
   const startIndex = Math.max(0, GALLERY_PAGES.findIndex((p) => p.id === pageId));
   const [index, setIndex] = useState(startIndex);
   const dragStartY = useRef<number | null>(null);
@@ -78,10 +91,9 @@ function GalleryCarousel({ pageId, onSelect }: { pageId: string; onSelect: (path
   }, [pageId]);
 
   const total = GALLERY_PAGES.length;
-  const cardHeight = 360;
-  const gap = 22;
+  const cardHeight = 312;
+  const gap = 20;
   const step = cardHeight + gap;
-  const containerHeight = "min(620px, 72vh)";
 
   const goTo = (i: number) => setIndex(Math.max(0, Math.min(total - 1, i)));
 
@@ -98,71 +110,92 @@ function GalleryCarousel({ pageId, onSelect }: { pageId: string; onSelect: (path
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", maxWidth: 460 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", maxWidth: 440 }}>
       <div
-        style={{ position: "relative", width: "100%", height: containerHeight, overflow: "hidden" }}
+        style={{ position: "relative", width: "100%", height: "min(560px, 70vh)", overflow: "hidden" }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         onWheel={onWheel}
       >
-        {GALLERY_PAGES.map((p, i) => {
-          const offset = i - index;
-          const isActive = offset === 0;
-          const translateY = `calc(50% + ${offset * step}px - ${cardHeight / 2}px)`;
-          const visible = Math.abs(offset) <= 2;
+        <div
+          style={{
+            display: "flex", flexDirection: "column", gap,
+            transform: `translateY(calc(50% - ${index * step + cardHeight / 2}px))`,
+            transition: "transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)",
+          }}
+        >
+          {GALLERY_PAGES.map((p, i) => {
+            const offset = i - index;
+            const isActive = offset === 0;
+            const visible = Math.abs(offset) <= 2;
 
-          return (
-            <button
-              key={p.id}
-              onClick={() => !p.soon && onSelect(p.path)}
-              style={{
-                position: "absolute", left: 0, right: 0, top: 0,
-                height: cardHeight, borderRadius: 28, overflow: "hidden",
-                border: "none", padding: 0, textAlign: "left",
-                cursor: p.soon ? "not-allowed" : "pointer",
-                transform: `translateY(${translateY}) scale(${isActive ? 1 : 0.86})`,
-                opacity: visible ? (isActive ? 1 : 0.4) : 0,
-                filter: isActive ? "none" : "blur(1px)",
-                zIndex: isActive ? 2 : 1,
-                transition: "transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s, filter 0.45s",
-                background: `linear-gradient(165deg, ${p.color}29 0%, ${P.surface} 62%)`,
-                boxShadow: isActive ? `0 16px 40px rgba(0,0,0,0.5), inset 0 0 0 1.5px ${p.color}` : `inset 0 0 0 1px ${P.border}`,
-                pointerEvents: visible ? "auto" : "none",
-              }}
-            >
-              <div style={{ width: "100%", height: "62%", background: "#000" }}>
-                <img
-                  src={p.img}
-                  alt={p.label}
-                  style={{
-                    width: "100%", height: "100%", objectFit: "cover",
-                    filter: p.soon ? "grayscale(0.6) brightness(0.55)" : "none",
-                  }}
-                />
-              </div>
-              <div style={{
-                padding: "16px 20px", display: "flex", alignItems: "center",
-                justifyContent: "space-between", gap: 12,
-              }}>
-                <div>
-                  <h3 style={{ fontFamily: display, fontSize: 21, margin: "0 0 3px", color: p.soon ? P.dim : p.color }}>
-                    {p.label}
-                  </h3>
-                  <p style={{ margin: 0, fontSize: 12, color: P.muted }}>{p.tag}</p>
+            return (
+              <button
+                key={p.id}
+                onClick={() => !p.soon && onSelect(p.path)}
+                style={{
+                  flexShrink: 0, width: "100%", height: cardHeight, borderRadius: 24,
+                  overflow: "hidden", border: "none", padding: 0, textAlign: "left",
+                  cursor: p.soon ? "not-allowed" : "pointer",
+                  transform: `scale(${isActive ? 1 : 0.88})`,
+                  opacity: visible ? (isActive ? 1 : 0.4) : 0,
+                  filter: isActive ? "none" : "blur(0.5px)",
+                  transition: "transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s, filter 0.4s",
+                  background: P.surface,
+                  boxShadow: isActive ? `0 18px 40px rgba(0,0,0,0.5), inset 0 0 0 1.5px ${p.color}` : `inset 0 0 0 1px ${P.border}`,
+                  pointerEvents: visible ? "auto" : "none",
+                  position: "relative",
+                }}
+              >
+                <div style={{ position: "relative", width: "100%", height: "64%", background: "#000" }}>
+                  <img
+                    src={p.img}
+                    alt={p.label}
+                    style={{
+                      width: "100%", height: "100%", objectFit: "cover",
+                      filter: p.soon ? "grayscale(0.65) brightness(0.5)" : "none",
+                    }}
+                  />
+                  <div style={{
+                    position: "absolute", left: 0, right: 0, bottom: 0, height: 48,
+                    background: `linear-gradient(180deg, transparent, ${P.surface})`,
+                  }} />
                 </div>
-                {p.soon ? (
-                  <span style={{
-                    flexShrink: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
-                    textTransform: "uppercase", color: P.dim, background: "rgba(255,255,255,0.04)",
-                    border: `1px solid ${P.border}`, borderRadius: 20, padding: "6px 12px",
-                  }}>Soon</span>
-                ) : (
-                  <span style={{ flexShrink: 0, fontSize: 18, color: p.color }}>→</span>
-                )}
-              </div>
-            </button>
-          );
-        })}
+
+                <div style={{
+                  padding: "14px 20px 0", display: "flex", alignItems: "flex-start",
+                  justifyContent: "space-between", gap: 12,
+                }}>
+                  <div>
+                    <h3 style={{ fontFamily: marker, fontSize: 19, margin: "0 0 5px", color: p.soon ? P.dim : p.color }}>
+                      {p.label}
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 11, letterSpacing: "0.04em", color: P.muted }}>{p.tag}</p>
+                  </div>
+
+                  {p.soon ? (
+                    <span style={{
+                      flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5,
+                      fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
+                      color: P.dim, background: "rgba(255,255,255,0.04)",
+                      border: `1px solid ${P.border}`, borderRadius: 20, padding: "5px 11px",
+                    }}>
+                      <Lock size={10} /> {t("gallery.soon")}
+                    </span>
+                  ) : (
+                    <span style={{
+                      flexShrink: 0, width: 28, height: 28, borderRadius: "50%",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: `${p.color}1a`, border: `1px solid ${p.color}55`, color: p.color,
+                    }}>
+                      <ArrowRight size={14} />
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Side dots */}
