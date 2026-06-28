@@ -62,7 +62,7 @@ export default function Leaderboard({ limit = 100, showViewAll = false }: { limi
   const podium = [rows[1], rows[0], rows[2]]; // silver, gold, bronze visual order
   const rest = rows.slice(3);
 
-  const localeMap: Record<string, string> = { en: "en-GB", zh: "zh-CN", ja: "ja-JP" };
+  const localeMap: Record<string, string> = { en: "en-GB", zh: "zh-CN", ko: "ko-KR" };
   const fmtDate = (iso: string) => {
     try {
       const d = new Date(iso);
