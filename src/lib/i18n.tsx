@@ -5,18 +5,18 @@ import { createContext, useContext, useEffect, useState } from "react";
  * Wrap your app root with <LanguageProvider> (see App.tsx snippet),
  * then call useLanguage() anywhere to get { lang, setLang, t }.
  *
- * NOTE ON TRANSLATION QUALITY: these zh/ja strings were machine-translated
+ * NOTE ON TRANSLATION QUALITY: these zh/ko strings were machine-translated
  * by Claude, not reviewed by a native speaker. They should read fine for
  * UI labels, but get a native speaker to pass over the copy (especially
  * the character blurbs and whitelist/legal-adjacent text) before this
  * goes live publicly.
  */
 
-export type Lang = "en" | "zh" | "ja";
-export const LANGS: { code: Lang; label: string }[] = [
-  { code: "en", label: "EN" },
-  { code: "zh", label: "中文" },
-  { code: "ja", label: "日本語" },
+export type Lang = "en" | "zh" | "ko";
+export const LANGS: { code: Lang; label: string; flag: string }[] = [
+  { code: "en", label: "EN", flag: "🇬🇧" },
+  { code: "zh", label: "中文", flag: "🇨🇳" },
+  { code: "ko", label: "한국어", flag: "🇰🇷" },
 ];
 
 const dict: Record<Lang, Record<string, any>> = {
@@ -146,66 +146,66 @@ const dict: Record<Lang, Record<string, any>> = {
     },
   },
 
-  ja: {
-    nav: { out: "ログアウト", pts: "pt" },
+  ko: {
+    nav: { out: "로그아웃", pts: "포인트" },
     hero: {
-      status: "OpenSeaでミント中",
-      subtitle: "ミームギャラリー",
-      tagline: "インターネットで最も象徴的なミームを集めたギャラリー —— わかる人のために。",
+      status: "OpenSea에서 민팅 중",
+      subtitle: "밈 갤러리",
+      tagline: "인터넷에서 가장 상징적인 밈들을 모은 갤러리 — 아는 사람들을 위해 만들었습니다.",
     },
-    stat: { mintPrice: "ミント価格", supply: "供給量", chain: "チェーン", launchpad: "ローンチパッド", tba: "未定" },
-    cta: { gallery: "ギャラリー", collab: "コラボ", whitelist: "ホワイトリスト" },
+    stat: { mintPrice: "민팅 가격", supply: "발행량", chain: "체인", launchpad: "런치패드", tba: "미정" },
+    cta: { gallery: "갤러리", collab: "콜라보", whitelist: "화이트리스트" },
     explore: {
-      eyebrow: "探索する",
-      title: "ギャラリーへ進む",
-      desc: "Pepe、Brett、Bonk、世界観設定など、GOMEのすべてがここに。",
-      button: "ギャラリーへ進む →",
+      eyebrow: "탐험하기",
+      title: "갤러리로 들어가기",
+      desc: "Pepe, Brett, Bonk, 세계관 설정 등 GOME의 모든 것을 한곳에서 만나보세요.",
+      button: "갤러리로 들어가기 →",
     },
     collection: {
-      eyebrow: "コレクション",
-      title: "メンバーを紹介",
-      captionSuffix: "供給量 · 続報をお楽しみに",
+      eyebrow: "컬렉션",
+      title: "멤버들을 소개합니다",
+      captionSuffix: "발행량 · 더 많은 콘텐츠가 곧 공개됩니다",
     },
     character: {
-      pepe: "インターネット文化の象徴。無数の表情でミームの共通言語となったこのカエルは、コマ漫画からインターネットで最も認知度の高いアイコンの一つへと進化した。",
-      bonk: "暗号資産の歴史に飛び込んだ柴犬のマスコット。コミュニティ、楽しさ、そして分散型インターネット文化の遊び心を体現している。",
-      brett: "インターネットの気楽な相棒。落ち着いた性格と特徴的なブルーの見た目で知られ、Web3コミュニティで多くの熱心なファンを持つ、ミーム文化のリラックスした側面を代表する存在。",
+      pepe: "인터넷 문화의 상징. 수많은 표정으로 밈의 공통 언어가 된 이 개구리는 만화 컷에서 인터넷에서 가장 알아보기 쉬운 아이콘 중 하나로 발전했습니다.",
+      bonk: "암호화폐 역사에 뛰어든 시바견 마스코트. 커뮤니티, 즐거움, 그리고 탈중앙화 인터넷 문화의 장난스러운 정신을 담고 있습니다.",
+      brett: "인터넷의 느긋한 친구. 차분한 성격과 시그니처 블루 컬러로 알려진 Brett은 밈 문화의 여유로운 면을 대표하며, Web3 커뮤니티에서 많은 충성 팬을 보유하고 있습니다.",
     },
-    roast: { eyebrow: "容赦なし", title: "ロースト・ミー", desc: "あなたのプロフィールを取得して、その場でローストします。" },
-    leaderboard: { eyebrow: "トップ100", title: "リーダーボード" },
+    roast: { eyebrow: "자비 없음", title: "나를 놀려줘", desc: "당신의 프로필을 가져와서 그 자리에서 놀려드립니다." },
+    leaderboard: { eyebrow: "상위 100명", title: "리더보드" },
     tasks: {
-      eyebrow: "ポイントを獲得", title: "ポイントを集める",
-      desc: "以下のタスクを完了してリーダーボードを上げよう。",
-      followJoin: "フォロー & 参加", tweetEngagement: "ツイートエンゲージメント",
-      followDesc: "ドロップ・アルファ情報・告知のためGOMEをXでフォロー。",
-      openOnX: "Xで開く", claimed: "獲得済み",
-      open: "開く →", wait: "{s}秒待つ…",
-      like: "いいね", retweet: "リツイート", commentTag: "コメント & タグ付け",
-      postId: "投稿 #{id}",
+      eyebrow: "포인트 획득", title: "포인트 모으기",
+      desc: "아래 작업을 완료하고 리더보드 순위를 올려보세요.",
+      followJoin: "팔로우 & 참여", tweetEngagement: "트윗 참여",
+      followDesc: "드롭, 알파 정보, 공지사항을 위해 X에서 GOME을 팔로우하세요.",
+      openOnX: "X에서 열기", claimed: "수령 완료",
+      open: "열기 →", wait: "{s}초 대기…",
+      like: "좋아요", retweet: "리트윗", commentTag: "댓글 & 태그",
+      postId: "게시물 #{id}",
     },
     lb: {
-      yourRank: "あなたの順位：", with: "ポイント",
-      empty: "まだランキングがありません —— 最初のポイントを獲得しよう。",
-      rank: "順位", user: "ユーザー", stars: "ポイント", joined: "{date} に参加",
-      viewAll: "全ランキングを見る →",
+      yourRank: "내 순위:", with: "포인트",
+      empty: "아직 순위가 없습니다 — 첫 포인트를 획득해보세요.",
+      rank: "순위", user: "사용자", stars: "포인트", joined: "{date} 가입",
+      viewAll: "전체 리더보드 보기 →",
     },
     wl: {
-      confirmTitle: "ホワイトリストに申請",
-      confirmDesc: "簡単なタスクとウォレットアドレスで、確定ミント枠の抽選に参加できます。",
-      notNow: "今はしない", letsGo: "進む →",
-      formTitle: "ホワイトリスト申請", applyingAs: "申請者：@{handle}",
-      completeTasks: "タスクを完了",
-      follow: "@GomeJpegをフォロー", retweet: "固定ポストをリツイート", quote: "固定ポストを引用ツイート",
-      quotePlaceholder: "引用ツイートのリンクを貼り付け", done: "完了 ✓", go: "進む →",
-      walletLabel: "EVMウォレットアドレス",
-      walletRequired: "ウォレットアドレスは必須です。",
-      walletInvalid: "有効なEVMアドレス（0x…）ではないようです。",
-      quoteRequired: "引用ツイートのリンクを貼り付けてください。",
-      submitFailed: "送信に失敗しました。再度お試しください。",
-      submitting: "送信中…", submit: "申請を送信 →",
-      successAlready: "選考待ちリストに入りました", successNew: "申請を受け付けました",
-      successDesc: "申請は人力で審査します。選考結果は@GomeJpegをご確認ください。",
-      close: "閉じる",
+      confirmTitle: "화이트리스트 신청",
+      confirmDesc: "간단한 작업 몇 가지와 지갑 주소만 있으면 확정 민팅 자리 추첨에 참여할 수 있습니다.",
+      notNow: "나중에", letsGo: "시작하기 →",
+      formTitle: "화이트리스트 신청서", applyingAs: "신청자: @{handle}",
+      completeTasks: "작업 완료하기",
+      follow: "@GomeJpeg 팔로우", retweet: "고정 게시물 리트윗", quote: "고정 게시물 인용 트윗",
+      quotePlaceholder: "인용 트윗 링크를 붙여넣으세요", done: "완료 ✓", go: "이동 →",
+      walletLabel: "EVM 지갑 주소",
+      walletRequired: "지갑 주소를 입력해주세요.",
+      walletInvalid: "유효한 EVM 주소(0x…)가 아닌 것 같습니다.",
+      quoteRequired: "인용 트윗 링크를 붙여넣어 주세요.",
+      submitFailed: "제출에 실패했습니다. 다시 시도해주세요.",
+      submitting: "제출 중…", submit: "신청서 제출 →",
+      successAlready: "대기 목록에 등록되었습니다", successNew: "신청이 접수되었습니다",
+      successDesc: "모든 신청은 수동으로 검토됩니다. 선정 결과는 @GomeJpeg를 확인해주세요.",
+      close: "닫기",
     },
   },
 };
@@ -223,7 +223,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY) as Lang | null;
-      if (saved && (saved === "en" || saved === "zh" || saved === "ja")) return saved;
+      if (saved && (saved === "en" || saved === "zh" || saved === "ko")) return saved;
     } catch { /* noop */ }
     return "en";
   });
