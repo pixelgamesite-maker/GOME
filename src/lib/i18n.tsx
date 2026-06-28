@@ -22,6 +22,7 @@ export const LANGS: { code: Lang; label: string; flag: string }[] = [
 const dict: Record<Lang, Record<string, any>> = {
   en: {
     nav: { out: "Out", pts: "pts" },
+    gallery: { badge: "Gallery", soon: "Soon" },
     hero: {
       status: "Minting on OpenSea",
       subtitle: "Gallery Of Meme",
@@ -86,6 +87,7 @@ const dict: Record<Lang, Record<string, any>> = {
 
   zh: {
     nav: { out: "退出", pts: "积分" },
+    gallery: { badge: "图库", soon: "即将上线" },
     hero: {
       status: "正在 OpenSea 上铸造",
       subtitle: "表情包画廊",
@@ -150,6 +152,7 @@ const dict: Record<Lang, Record<string, any>> = {
 
   ko: {
     nav: { out: "로그아웃", pts: "포인트" },
+    gallery: { badge: "갤러리", soon: "출시 예정" },
     hero: {
       status: "OpenSea에서 민팅 중",
       subtitle: "밈 갤러리",
