@@ -1,21 +1,32 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { SafeImage } from "@/components/SafeImage";
 import MemeMe from "@/components/MemeMe";
+import Leaderboard from "@/components/Leaderboard";
+import WhitelistApp from "@/components/WhitelistApp";
 import { Twitter, Heart, Repeat2, MessageCircle, ExternalLink, CheckCircle2 } from "lucide-react";
 
 const P = {
+  bg: "#070707", surface: "#141414", border: "rgba(255,255,255,0.08)",
+  text: "#f5f5f5", muted: "rgba(255,255,255,0.45)", dim: "rgba(255,255,255,0.18)",
   pepe: "#3ddc52", brett: "#3b82f6", bonk: "#f97316",
-  ink: "#15161a", muted: "#6b6f76", border: "#ececec", paper: "#ffffff", soft: "#f7f7f8",
 };
 
-const display = "'Fredoka', sans-serif";
+const serif = "'Playfair Display', serif";
 const body = "'Space Grotesk', sans-serif";
 
+const SUPPLY = "4,404";
 const TWEET_ID = "2070602933767389663";
 const TWEET_URL = `https://x.com/i/status/${TWEET_ID}`;
+
+// TODO: swap in the real numbered asset paths from the repo
+const COLLECTION_IMAGES = [
+  "/collection/1.png", "/collection/2.png", "/collection/3.png",
+  "/collection/4.png", "/collection/5.png",
+];
 
 const TASKS = [
   { id: "follow", label: "Follow @GomeJpeg", points: 50, url: "https://x.com/GomeJpeg", color: P.pepe },
@@ -31,7 +42,6 @@ export default function Home() {
   const [, navigate] = useLocation();
   const [claimed, setClaimed] = useState<Set<string>>(new Set());
   const [totalPoints, setTotalPoints] = useState(0);
-  const [rank, setRank] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -39,7 +49,6 @@ export default function Home() {
     if (user) fetchPoints();
   }, [user, loading, navigate]);
 
-  // Load the Twitter widget script once, for the embedded tweet preview
   useEffect(() => {
     if (!document.getElementById("twitter-widget-script")) {
       const script = document.createElement("script");
@@ -63,12 +72,6 @@ export default function Home() {
     const pts = (data || []).reduce((a: number, b: TaskLog) => a + (b.points || 0), 0);
     setClaimed(set);
     setTotalPoints(pts);
-
-    const { count } = await supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .gt("points_total", pts);
-    setRank((count || 0) + 1);
   };
 
   const claim = async (task: typeof TASKS[0]) => {
@@ -96,11 +99,11 @@ export default function Home() {
   const tweetTasks = TASKS.filter((t) => t.id !== "follow");
 
   return (
-    <div style={{ background: P.paper, minHeight: "100vh", color: P.ink, fontFamily: body }}>
+    <div style={{ background: P.bg, minHeight: "100vh", color: P.text, fontFamily: body }}>
       <style>{`
         @keyframes gome-pulse {
-          0%, 100% { text-shadow: 0 0 18px rgba(255,255,255,0.55), 0 4px 0 rgba(0,0,0,0.15); }
-          50% { text-shadow: 0 0 34px rgba(255,255,255,0.92), 0 4px 0 rgba(0,0,0,0.15); }
+          0%, 100% { text-shadow: 0 0 22px rgba(255,255,255,0.35); }
+          50% { text-shadow: 0 0 44px rgba(255,255,255,0.7); }
         }
       `}</style>
 
@@ -108,23 +111,22 @@ export default function Home() {
       <nav style={{
         position: "sticky", top: 0, zIndex: 50, height: 72,
         padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between",
-        background: "rgba(255,255,255,0.92)", backdropFilter: "blur(20px)",
+        background: "rgba(7,7,7,0.92)", backdropFilter: "blur(20px)",
         borderBottom: `1px solid ${P.border}`,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <SafeImage src="/GOME-LOGO.png" alt="GOME" style={{ height: 30, width: 30 }} />
-          <span style={{ fontFamily: display, fontSize: 18, fontWeight: 600 }}>GOME</span>
+          <span style={{ fontFamily: serif, fontSize: 19, fontWeight: 700 }}>GOME</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{
-            fontFamily: display, fontSize: 14, color: P.ink,
-            background: P.soft, border: `1px solid ${P.border}`,
-            padding: "6px 14px", borderRadius: 20,
+            fontSize: 13, color: P.text, background: P.surface,
+            border: `1px solid ${P.border}`, padding: "6px 14px", borderRadius: 20,
           }}>
             {totalPoints} pts
           </span>
           <div style={{ width: 36, height: 36, borderRadius: "50%", background: ringGradient, padding: 2 }}>
-            <img src={avatar} alt="avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", display: "block", border: `2px solid ${P.paper}` }} />
+            <img src={avatar} alt="avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", display: "block", border: `2px solid ${P.bg}` }} />
           </div>
           <button onClick={signOut} style={{
             fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em",
@@ -134,42 +136,76 @@ export default function Home() {
       </nav>
 
       {/* HERO */}
-      <section style={{
-        background: `linear-gradient(135deg, ${P.pepe}, ${P.brett} 55%, ${P.bonk})`,
-        padding: "56px 24px 64px", textAlign: "center", color: "#fff",
-      }}>
-        <SafeImage src="/GOME-HERO.png" alt="GOME" style={{ height: 170, margin: "0 auto 12px", display: "block" }} />
+      <section style={{ position: "relative", padding: "64px 24px 56px", textAlign: "center", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: -90, left: "10%", width: 260, height: 260, borderRadius: "50%", background: P.pepe, opacity: 0.14, filter: "blur(80px)" }} />
+        <div style={{ position: "absolute", top: -50, right: "8%", width: 240, height: 240, borderRadius: "50%", background: P.brett, opacity: 0.16, filter: "blur(80px)" }} />
+        <div style={{ position: "absolute", bottom: -70, left: "38%", width: 260, height: 260, borderRadius: "50%", background: P.bonk, opacity: 0.12, filter: "blur(80px)" }} />
+
+        <SafeImage src="/GOME-HERO.png" alt="GOME" style={{ height: 170, margin: "0 auto 18px", display: "block", position: "relative" }} />
+
+        <p style={{
+          display: "inline-block", margin: "0 0 18px", fontSize: 12, letterSpacing: "0.12em",
+          color: P.muted, border: `1px solid ${P.border}`, borderRadius: 30, padding: "7px 18px",
+        }}>
+          {SUPPLY} ON ETH
+        </p>
+
         <h1 style={{
-          fontFamily: display, fontSize: "clamp(48px, 11vw, 76px)", fontWeight: 700,
-          margin: "0 0 6px", lineHeight: 1, color: "#fff",
-          animation: "gome-pulse 2.4s ease-in-out infinite",
+          fontFamily: serif, fontSize: "clamp(56px, 13vw, 96px)", fontWeight: 700,
+          margin: "0 0 8px", lineHeight: 1, color: "#fff", animation: "gome-pulse 2.6s ease-in-out infinite",
         }}>
           GOME
         </h1>
-        <p style={{ fontFamily: display, fontSize: 20, fontWeight: 600, margin: "0 0 10px", opacity: 0.95 }}>
+        <p style={{ fontFamily: serif, fontStyle: "italic", fontSize: 19, margin: "0 0 12px", color: "rgba(255,255,255,0.85)" }}>
           Gallery Of Meme
         </p>
-        <p style={{ fontSize: 14, opacity: 0.85, maxWidth: 380, margin: "0 auto 28px" }}>
+        <p style={{ fontFamily: serif, fontStyle: "italic", fontSize: 15, color: P.muted, maxWidth: 380, margin: "0 auto 30px" }}>
           A gallery of internet's most iconic memes.
         </p>
 
         <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
-          <button onClick={() => navigate("/gallery")} style={pillBtn(P.pepe)}>Gallery</button>
-          <button onClick={() => navigate("/leaderboard")} style={pillBtn(P.brett)}>Leaderboard</button>
-          <button onClick={() => navigate("/collab")} style={pillBtn(P.bonk)}>Collab</button>
+          <button onClick={() => navigate("/gallery")} style={outlinePill(P.pepe)}>Gallery</button>
+          <button onClick={() => navigate("/collab")} style={outlinePill(P.bonk)}>Collab</button>
+          <WhitelistApp triggerLabel="Whitelist" triggerStyle={solidPill(P.brett)} />
         </div>
       </section>
 
-      {/* COLLECTION DETAILS */}
-      <section style={{ background: P.soft, padding: "44px 24px", textAlign: "center" }}>
-        <h2 style={{ fontFamily: display, fontSize: 24, margin: "0 0 22px" }}>Collection Details</h2>
-        <div style={{ display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap", maxWidth: 640, margin: "0 auto" }}>
-          <StatChip label="Supply" value="4,004" color={P.pepe} />
-          <StatChip label="Platform" value="OpenSea" color={P.brett} />
-          <StatChip label="Chain" value="Ethereum" color={P.bonk} />
-          <StatChip label="Mint Price" value="TBA" color={P.pepe} />
+      {/* COLLECTION DETAILS — Minionz-style stat strip */}
+      <section style={{ padding: "8px 24px 56px", textAlign: "center" }}>
+        <div style={{
+          display: "flex", justifyContent: "center", maxWidth: 640, margin: "0 auto",
+          border: `1px solid ${P.border}`, borderRadius: 18,
+        }}>
+          {[
+            { label: "Supply", value: SUPPLY },
+            { label: "Mint Price", value: "TBA" },
+            { label: "Chain", value: "Ethereum" },
+            { label: "Launchpad", value: "OpenSea" },
+          ].map((s, i) => (
+            <div key={s.label} style={{
+              flex: 1, padding: "20px 8px", borderLeft: i > 0 ? `1px solid ${P.border}` : "none",
+            }}>
+              <p style={{ fontFamily: serif, fontSize: 19, margin: "0 0 4px" }}>{s.value}</p>
+              <p style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: P.muted, margin: 0 }}>{s.label}</p>
+            </div>
+          ))}
         </div>
       </section>
+
+      {/* STEP INTO THE GALLERY */}
+      <section style={{ padding: "20px 24px 64px", textAlign: "center" }}>
+        <p style={eyebrow}>Explore</p>
+        <h2 style={{ fontFamily: serif, fontSize: 36, margin: "0 0 14px" }}>Step Into The Gallery</h2>
+        <p style={{ fontFamily: serif, fontStyle: "italic", color: P.muted, fontSize: 15, maxWidth: 420, margin: "0 auto 28px", lineHeight: 1.7 }}>
+          Pepe, Brett, Bonk, the lore, and everything else GOME has to show off — all in one place.
+        </p>
+        <button onClick={() => navigate("/gallery")} style={{ ...solidPill(P.pepe), padding: "16px 36px", fontSize: 13 }}>
+          Enter The Gallery →
+        </button>
+      </section>
+
+      {/* COLLECTION SHOWCASE */}
+      <CollectionShowcase images={COLLECTION_IMAGES} supply={SUPPLY} />
 
       {/* CHARACTER SECTIONS */}
       <CharacterSection
@@ -186,31 +222,29 @@ export default function Home() {
       />
 
       {/* MEME ME */}
-      <section style={{ background: "#0c0c0c", padding: "56px 24px", textAlign: "center" }}>
-        <h2 style={{ fontFamily: display, fontSize: 28, color: "#fff", margin: "0 0 10px" }}>Roast Me</h2>
-        <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, maxWidth: 380, margin: "0 auto 32px" }}>
-          We'll pull your profile and roast you on the spot. No mercy.
+      <section style={{ padding: "64px 24px", textAlign: "center" }}>
+        <p style={eyebrow}>No Mercy</p>
+        <h2 style={{ fontFamily: serif, fontSize: 32, margin: "0 0 12px" }}>Roast Me</h2>
+        <p style={{ color: P.muted, fontSize: 14, maxWidth: 380, margin: "0 auto 32px" }}>
+          We'll pull your profile and roast you on the spot.
         </p>
         <MemeMe />
       </section>
 
       {/* TASKS */}
-      <main style={{ maxWidth: 700, margin: "0 auto", padding: "56px 24px" }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: P.muted, margin: "0 0 6px" }}>
-          Earn Points
-        </p>
-        <h2 style={{ fontFamily: display, fontSize: 28, margin: "0 0 8px" }}>Collect Points</h2>
+      <main style={{ maxWidth: 700, margin: "0 auto", padding: "8px 24px 72px" }}>
+        <p style={eyebrow}>Earn Points</p>
+        <h2 style={{ fontFamily: serif, fontSize: 32, margin: "0 0 10px" }}>Collect Points</h2>
         <p style={{ color: P.muted, fontSize: 13, margin: "0 0 32px" }}>
-          Rank <strong style={{ color: P.ink }}>#{rank ?? "—"}</strong> · Top 1000 get GTD mint
+          Complete the tasks below to climb the leaderboard.
         </p>
 
-        {/* Follow & Join */}
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: P.muted, marginBottom: 14 }}>
           Follow & Join
         </p>
         <div style={{
           display: "flex", alignItems: "center", gap: 16, padding: 20, borderRadius: 18,
-          border: `1px solid ${P.border}`, background: P.paper, marginBottom: 36,
+          border: `1px solid ${P.border}`, background: P.surface, marginBottom: 36,
         }}>
           <div style={{
             width: 44, height: 44, borderRadius: 12, background: `${followTask.color}1a`,
@@ -230,11 +264,10 @@ export default function Home() {
           <TaskClaimButton task={followTask} claimed={claimed.has(followTask.id)} busy={busy} onClaim={() => claim(followTask)} />
         </div>
 
-        {/* Tweet Engagement */}
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: P.muted, marginBottom: 14 }}>
           Tweet Engagement
         </p>
-        <div style={{ borderRadius: 18, border: `1px solid ${P.border}`, background: P.paper, overflow: "hidden", marginBottom: 40 }}>
+        <div style={{ borderRadius: 18, border: `1px solid ${P.border}`, background: P.surface, overflow: "hidden" }}>
           <div style={{ padding: 16, borderBottom: `1px solid ${P.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
               <Twitter size={14} color={P.brett} />
@@ -246,7 +279,7 @@ export default function Home() {
                 <ExternalLink size={12} /> Open on X
               </a>
             </div>
-            <blockquote className="twitter-tweet" data-theme="light">
+            <blockquote className="twitter-tweet" data-theme="dark">
               <a href={TWEET_URL}>View Tweet</a>
             </blockquote>
           </div>
@@ -268,7 +301,7 @@ export default function Home() {
                     onClick={() => claim(t)}
                     style={{
                       width: "100%", padding: "8px 0", borderRadius: 8, border: "none",
-                      background: isClaimed ? P.soft : t.color,
+                      background: isClaimed ? "rgba(255,255,255,0.06)" : t.color,
                       color: isClaimed ? P.muted : "#fff", fontWeight: 700, fontSize: 11,
                       cursor: isClaimed ? "default" : "pointer", textTransform: "uppercase", letterSpacing: "0.04em",
                     }}
@@ -280,59 +313,69 @@ export default function Home() {
             })}
           </div>
         </div>
-
-        {/* Progress */}
-        <div style={{ background: P.paper, border: `1px solid ${P.border}`, borderRadius: 16, padding: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 13, color: P.muted }}>Your Progress</span>
-            <span style={{ fontSize: 13, color: P.ink, fontWeight: 700 }}>{totalPoints} / 100 pts</span>
-          </div>
-          <div style={{ height: 8, background: P.soft, borderRadius: 10, overflow: "hidden" }}>
-            <div style={{
-              width: `${Math.min((totalPoints / 100) * 100, 100)}%`,
-              height: "100%", background: `linear-gradient(90deg, ${P.pepe}, ${P.brett}, ${P.bonk})`,
-              borderRadius: 10, transition: "width 0.5s ease",
-            }} />
-          </div>
-          <p style={{ fontSize: 12, color: P.muted, marginTop: 10 }}>
-            Complete all tasks to maximize your rank. Top 1000 wallets are guaranteed mint.
-          </p>
-        </div>
       </main>
+
+      {/* LEADERBOARD */}
+      <section style={{ padding: "16px 24px 80px", textAlign: "center" }}>
+        <p style={eyebrow}>Top 100</p>
+        <h2 style={{ fontFamily: serif, fontSize: 32, margin: "0 0 32px" }}>Leaderboard</h2>
+        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+          <Leaderboard limit={10} showViewAll />
+        </div>
+      </section>
     </div>
   );
 }
 
-/* Full-bleed colorful character block */
-function CharacterSection({ bg, name, blurb, img }: { bg: string; name: string; blurb: string; img: string }) {
+/* Rotating "collection" showcase, Minizen-style drop/bounce */
+function CollectionShowcase({ images, supply }: { images: string[]; supply: string }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setIdx((p) => (p + 1) % images.length), 3000);
+    return () => clearInterval(id);
+  }, [images.length]);
+
   return (
-    <section style={{ background: bg, padding: "56px 24px 64px", textAlign: "center" }}>
-      <h2 style={{
-        fontFamily: display, fontSize: 38, color: "#fff", margin: "0 0 14px",
-        textShadow: "0 3px 0 rgba(0,0,0,0.15)",
-      }}>{name}</h2>
-      <p style={{ color: "rgba(255,255,255,0.95)", fontSize: 15, lineHeight: 1.7, maxWidth: 420, margin: "0 auto 28px" }}>
-        {blurb}
-      </p>
+    <section style={{ padding: "0 24px 64px", textAlign: "center" }}>
+      <p style={eyebrow}>The Collection</p>
+      <h2 style={{ fontFamily: serif, fontSize: 32, margin: "0 0 28px" }}>Some Of The Crew</h2>
       <div style={{
-        display: "inline-block", background: "#fff", borderRadius: 28, padding: 18,
-        boxShadow: "0 14px 34px rgba(0,0,0,0.2)",
+        width: 280, height: 280, margin: "0 auto", position: "relative",
+        borderRadius: 20, overflow: "hidden", border: `1px solid ${P.border}`, background: P.surface,
       }}>
-        <SafeImage src={img} alt={name} style={{ height: 200, display: "block", objectFit: "contain" }} />
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={idx}
+            src={images[idx]}
+            alt={`GOME #${idx + 1}`}
+            initial={{ y: -300, opacity: 0, rotate: -6, scale: 0.9 }}
+            animate={{ y: 0, opacity: 1, rotate: 0, scale: 1, transition: { type: "spring", stiffness: 120, damping: 10, mass: 1.4 } }}
+            exit={{ y: 160, opacity: 0, transition: { duration: 0.25 } }}
+            style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        </AnimatePresence>
       </div>
+      <p style={{ marginTop: 18, fontSize: 11, letterSpacing: "0.12em", color: P.muted, textTransform: "uppercase" }}>
+        {supply} Supply · More Revealed Soon
+      </p>
     </section>
   );
 }
 
-function StatChip({ label, value, color }: { label: string; value: string; color: string }) {
+function CharacterSection({ bg, name, blurb, img }: { bg: string; name: string; blurb: string; img: string }) {
   return (
-    <div style={{
-      background: P.paper, border: `1px solid ${P.border}`, borderTop: `3px solid ${color}`,
-      borderRadius: 14, padding: "14px 22px", minWidth: 120,
-    }}>
-      <p style={{ margin: "0 0 4px", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: P.muted }}>{label}</p>
-      <p style={{ margin: 0, fontFamily: display, fontSize: 17, fontWeight: 600 }}>{value}</p>
-    </div>
+    <section style={{ background: bg, padding: "56px 24px 64px", textAlign: "center" }}>
+      <h2 style={{ fontFamily: serif, fontSize: 40, color: "#fff", margin: "0 0 14px", textShadow: "0 3px 0 rgba(0,0,0,0.15)" }}>
+        {name}
+      </h2>
+      <p style={{ color: "rgba(255,255,255,0.95)", fontSize: 15, lineHeight: 1.7, maxWidth: 420, margin: "0 auto 28px" }}>
+        {blurb}
+      </p>
+      <div style={{ display: "inline-block", background: "#fff", borderRadius: 28, padding: 18, boxShadow: "0 14px 34px rgba(0,0,0,0.25)" }}>
+        <SafeImage src={img} alt={name} style={{ height: 200, display: "block", objectFit: "contain" }} />
+      </div>
+    </section>
   );
 }
 
@@ -348,7 +391,7 @@ function TaskClaimButton({ task, claimed, busy, onClaim }: { task: typeof TASKS[
     <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
       <a href={task.url} target="_blank" rel="noreferrer" style={{
         padding: "8px 14px", borderRadius: 10, border: `1px solid ${P.border}`,
-        color: P.ink, textDecoration: "none", fontSize: 11, fontWeight: 700,
+        color: P.text, textDecoration: "none", fontSize: 11, fontWeight: 700,
       }}>Open</a>
       <button
         disabled={busy}
@@ -365,10 +408,19 @@ function TaskClaimButton({ task, claimed, busy, onClaim }: { task: typeof TASKS[
   );
 }
 
-function pillBtn(color: string): React.CSSProperties {
+const eyebrow: React.CSSProperties = {
+  fontSize: 11, fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase", color: P.muted, margin: "0 0 10px",
+};
+
+function outlinePill(color: string): React.CSSProperties {
   return {
     fontFamily: body, fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase",
-    color, background: "#fff", border: "none", borderRadius: 30,
-    padding: "11px 20px", cursor: "pointer",
+    color, background: "transparent", border: `1.5px solid ${color}`, borderRadius: 30,
+    padding: "10px 20px", cursor: "pointer",
+  };
+}
+function solidPill(color: string): React.CSSProperties {
+  return {
+    ...outlinePill(color), background: color, color: "#fff", border: "none", boxShadow: `0 0 24px ${color}55`,
   };
 }
