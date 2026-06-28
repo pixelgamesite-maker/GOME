@@ -1,7 +1,7 @@
 import { LANGS, useLanguage } from "@/lib/i18n";
 
 /**
- * LanguageSwitcher — pill group for the header, EN / 中文 / 日本語.
+ * LanguageSwitcher — pill group for the header, EN / 中文 / 한국어.
  * Matches the Bubble Buns style: rounded pill row, active language
  * filled with a solid color, the rest plain.
  */
@@ -22,19 +22,20 @@ export default function LanguageSwitcher() {
           <button
             key={l.code}
             onClick={() => setLang(l.code)}
+            aria-label={l.label}
+            title={l.label}
             style={{
-              fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700,
-              padding: "5px 10px", borderRadius: 16, border: "none", cursor: "pointer",
+              fontSize: 16, lineHeight: 1,
+              padding: "5px 9px", borderRadius: 16, border: "none", cursor: "pointer",
               background: active ? ACTIVE_COLOR : "transparent",
-              color: active ? "#000" : "rgba(255,255,255,0.5)",
+              filter: active ? "none" : "grayscale(0.6) opacity(0.6)",
               transition: "all 0.15s",
             }}
           >
-            {l.label}
+            {l.flag}
           </button>
         );
       })}
     </div>
   );
 }
-
