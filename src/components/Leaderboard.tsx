@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/i18n";
 
 /**
  * Leaderboard — Aurelia-style ranking panel.
@@ -28,6 +29,7 @@ type Row = { id: string; username: string | null; avatar_url: string | null; poi
 export default function Leaderboard({ limit = 100, showViewAll = false }: { limit?: number; showViewAll?: boolean }) {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const { t, lang } = useLanguage();
   const [rows, setRows] = useState<Row[]>([]);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myPoints, setMyPoints] = useState(0);
@@ -60,10 +62,11 @@ export default function Leaderboard({ limit = 100, showViewAll = false }: { limi
   const podium = [rows[1], rows[0], rows[2]]; // silver, gold, bronze visual order
   const rest = rows.slice(3);
 
+  const localeMap: Record<string, string> = { en: "en-GB", zh: "zh-CN", ja: "ja-JP" };
   const fmtDate = (iso: string) => {
     try {
       const d = new Date(iso);
-      return d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+      return d.toLocaleDateString(localeMap[lang] || "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
     } catch { return ""; }
   };
 
@@ -76,18 +79,18 @@ export default function Leaderboard({ limit = 100, showViewAll = false }: { limi
           background: P.surface, border: `1px solid ${P.border}`, borderRadius: 30,
           padding: "10px 20px",
         }}>
-          <span style={{ fontSize: 13, color: P.muted }}>Your rank:</span>
+          <span style={{ fontSize: 13, color: P.muted }}>{t("lb.yourRank")}</span>
           <span style={{ fontFamily: serif, fontSize: 16, color: P.gold, fontWeight: 700 }}>
             #{myRank ?? "—"}
           </span>
-          <span style={{ fontSize: 13, color: P.muted }}>with</span>
+          <span style={{ fontSize: 13, color: P.muted }}>{t("lb.with")}</span>
           <span style={{ fontWeight: 700 }}>{myPoints}</span>
           <span style={{ color: P.gold }}>★</span>
         </div>
       )}
 
       {!loading && rows.length === 0 && (
-        <p style={{ color: P.muted, fontSize: 13 }}>No rankings yet — be the first to earn points.</p>
+        <p style={{ color: P.muted, fontSize: 13 }}>{t("lb.empty")}</p>
       )}
 
       {/* Podium — top 3 */}
@@ -133,7 +136,7 @@ export default function Leaderboard({ limit = 100, showViewAll = false }: { limi
             fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: P.muted,
             borderBottom: `1px solid ${P.border}`,
           }}>
-            <span>Rank</span><span>User</span><span style={{ textAlign: "right" }}>Stars</span>
+            <span>{t("lb.rank")}</span><span>{t("lb.user")}</span><span style={{ textAlign: "right" }}>{t("lb.stars")}</span>
           </div>
           {rest.map((r, i) => (
             <div key={r.id} style={{
@@ -149,7 +152,7 @@ export default function Leaderboard({ limit = 100, showViewAll = false }: { limi
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     @{r.username || "anon"}
                   </p>
-                  <p style={{ margin: 0, fontSize: 11, color: P.muted }}>Joined {fmtDate(r.created_at)}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: P.muted }}>{t("lb.joined", { date: fmtDate(r.created_at) })}</p>
                 </div>
               </div>
               <span style={{ textAlign: "right", fontWeight: 700, color: P.gold }}>{r.points_total} ★</span>
@@ -167,7 +170,7 @@ export default function Leaderboard({ limit = 100, showViewAll = false }: { limi
             padding: "10px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer",
           }}
         >
-          View Full Leaderboard →
+          {t("lb.viewAll")}
         </button>
       )}
     </div>
