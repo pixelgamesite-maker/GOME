@@ -46,6 +46,7 @@ const dict: Record<Lang, Record<string, any>> = {
       brett: "The internet's laid-back best friend. Known for his calm attitude and signature blue look, Brett represents the easygoing side of meme culture, earning a devoted following across Web3 communities.",
     },
     roast: { eyebrow: "No Mercy", title: "Roast Me", desc: "We'll pull your profile and roast you on the spot." },
+    roastCard: { cta: "Roast Me →", reroll: "Reroll", shareX: "Share on X", status: "STATUS", about: "ABOUT", power: "POWER", weakness: "WEAKNESS", rating: "RATING" },
     leaderboard: { eyebrow: "Top 100", title: "Leaderboard" },
     tasks: {
       eyebrow: "Earn Points", title: "Collect Points",
@@ -109,6 +110,7 @@ const dict: Record<Lang, Record<string, any>> = {
       brett: "互联网上最随性的好朋友。以淡定的态度和标志性的蓝色形象著称，Brett 代表着表情包文化中轻松自在的一面，在 Web3 社区中拥有大批忠实粉丝。",
     },
     roast: { eyebrow: "毫不留情", title: "吐槽我", desc: "我们会调取你的资料，当场吐槽你。" },
+    roastCard: { cta: "吐槽我 →", reroll: "重新生成", shareX: "分享到 X", status: "状态", about: "简介", power: "能力", weakness: "弱点", rating: "评分" },
     leaderboard: { eyebrow: "前 100 名", title: "排行榜" },
     tasks: {
       eyebrow: "赚取积分", title: "收集积分",
@@ -172,6 +174,7 @@ const dict: Record<Lang, Record<string, any>> = {
       brett: "인터넷의 느긋한 친구. 차분한 성격과 시그니처 블루 컬러로 알려진 Brett은 밈 문화의 여유로운 면을 대표하며, Web3 커뮤니티에서 많은 충성 팬을 보유하고 있습니다.",
     },
     roast: { eyebrow: "자비 없음", title: "나를 놀려줘", desc: "당신의 프로필을 가져와서 그 자리에서 놀려드립니다." },
+    roastCard: { cta: "나를 놀려줘 →", reroll: "다시 굴리기", shareX: "X에 공유하기", status: "상태", about: "소개", power: "능력", weakness: "약점", rating: "평점" },
     leaderboard: { eyebrow: "상위 100명", title: "리더보드" },
     tasks: {
       eyebrow: "포인트 획득", title: "포인트 모으기",
