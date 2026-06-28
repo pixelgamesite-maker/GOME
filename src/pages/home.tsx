@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
 import { SafeImage } from "@/components/SafeImage";
 import MemeMe from "@/components/MemeMe";
 import Leaderboard from "@/components/Leaderboard";
 import WhitelistApp from "@/components/WhitelistApp";
-import { Twitter, Heart, Repeat2, MessageCircle, ExternalLink, CheckCircle2 } from "lucide-react";
+import TasksPanel from "@/components/TasksPanel";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useLanguage } from "@/lib/i18n";
 
 const P = {
   bg: "#070707", surface: "#141414", border: "rgba(255,255,255,0.08)",
@@ -21,89 +22,25 @@ const mono = "'Space Mono', monospace";
 const body = "'Space Grotesk', sans-serif";
 
 const SUPPLY = "4,404";
-const TWEET_ID = "2070602933767389663";
-const TWEET_URL = `https://x.com/i/status/${TWEET_ID}`;
 
 // Real collection preview assets — /1.jpg through /20.jpg in public/
 const COLLECTION_IMAGES = Array.from({ length: 20 }, (_, i) => `/${i + 1}.jpg`);
 
-const TASKS = [
-  { id: "follow", label: "Follow @GomeJpeg", points: 50, url: "https://x.com/GomeJpeg", color: P.pepe },
-  { id: "like", label: "Like", points: 10, url: TWEET_URL, color: P.brett, icon: Heart },
-  { id: "retweet", label: "Retweet", points: 20, url: TWEET_URL, color: P.bonk, icon: Repeat2 },
-  { id: "comment", label: "Comment & Tag", points: 20, url: TWEET_URL, color: P.pepe, icon: MessageCircle },
-];
-
-type TaskLog = { task_type: string; points: number };
-
 export default function Home() {
   const { user, loading, signOut } = useAuth();
   const [, navigate] = useLocation();
-  const [claimed, setClaimed] = useState<Set<string>>(new Set());
   const [totalPoints, setTotalPoints] = useState(0);
-  const [busy, setBusy] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!loading && !user) navigate("/");
-    if (user) fetchPoints();
   }, [user, loading, navigate]);
-
-  useEffect(() => {
-    if (!document.getElementById("twitter-widget-script")) {
-      const script = document.createElement("script");
-      script.id = "twitter-widget-script";
-      script.src = "https://platform.twitter.com/widgets.js";
-      script.async = true;
-      document.body.appendChild(script);
-    } else {
-      (window as any).twttr?.widgets?.load();
-    }
-  }, []);
-
-  const fetchPoints = async () => {
-    if (!user) return;
-    const { data, error } = await supabase
-      .from("points_log")
-      .select("task_type,points")
-      .eq("user_id", user.id);
-
-    if (error) console.error("[GOME] fetchPoints failed:", error.message, error);
-
-    const set = new Set((data || []).map((d: TaskLog) => d.task_type));
-    const pts = (data || []).reduce((a: number, b: TaskLog) => a + (b.points || 0), 0);
-    setClaimed(set);
-    setTotalPoints(pts);
-  };
-
-  // NOTE: if claiming silently does nothing, it's almost certainly an RLS
-  // policy missing on points_log / profiles in Supabase — see console for
-  // the actual error this now logs.
-  const claim = async (task: typeof TASKS[0]) => {
-    if (!user || claimed.has(task.id) || busy) return;
-    setBusy(true);
-    const { error } = await supabase.from("points_log").insert({
-      user_id: user.id,
-      task_type: task.id,
-      points: task.points,
-    });
-    if (error) {
-      console.error("[GOME] claim insert failed:", error.message, error);
-    } else {
-      const { error: rpcError } = await supabase.rpc("increment_points", { p_user_id: user.id, p_amount: task.points });
-      if (rpcError) console.error("[GOME] increment_points failed:", rpcError.message, rpcError);
-      await fetchPoints();
-    }
-    setBusy(false);
-  };
 
   if (loading || !user) return null;
 
   const meta = user.user_metadata || {};
   const avatar = meta.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`;
   const ringGradient = `conic-gradient(${P.pepe}, ${P.brett}, ${P.bonk}, ${P.pepe})`;
-
-  const followTask = TASKS.find((t) => t.id === "follow")!;
-  const tweetTasks = TASKS.filter((t) => t.id !== "follow");
 
   return (
     <div style={{ background: P.bg, minHeight: "100vh", color: P.text, fontFamily: body }}>
@@ -118,38 +55,41 @@ export default function Home() {
       {/* Nav */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 50, height: 72,
-        padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 16px 0 24px", display: "flex", alignItems: "center", justifyContent: "space-between",
         background: "rgba(7,7,7,0.92)", backdropFilter: "blur(20px)",
-        borderBottom: `1px solid ${P.border}`,
+        borderBottom: `1px solid ${P.border}`, gap: 12,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <SafeImage src="/GOME-LOGO.png" alt="GOME" style={{ height: 30, width: 30 }} />
           <span style={{ fontFamily: marker, fontSize: 18 }}>GOME</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <LanguageSwitcher />
           <span style={{
             fontFamily: mono, fontSize: 12, color: P.text, background: P.surface,
             border: `1px solid ${P.border}`, padding: "6px 14px", borderRadius: 20,
           }}>
-            {totalPoints} pts
+            {totalPoints} {t("nav.pts")}
           </span>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: ringGradient, padding: 2 }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: ringGradient, padding: 2, flexShrink: 0 }}>
             <img src={avatar} alt="avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", display: "block", border: `2px solid ${P.bg}` }} />
           </div>
           <button onClick={signOut} style={{
             fontFamily: mono, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em",
             color: P.muted, background: "transparent", border: "none", cursor: "pointer",
-          }}>Out</button>
+          }}>{t("nav.out")}</button>
         </div>
       </nav>
 
       {/* HERO — headline, stats, CTAs all in one block */}
-      <section style={{ position: "relative", padding: "56px 24px 48px", overflow: "hidden" }}>
+      <section style={{ position: "relative", padding: "96px 24px 48px", overflow: "hidden" }}>
         <WireframeDecor />
+
+        <SafeImage src="/GOME-HERO.png" alt="GOME" style={{ height: 150, margin: "0 auto 28px", display: "block" }} />
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, fontFamily: mono, fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: P.muted }}>
           <span style={{ width: 8, height: 8, borderRadius: "50%", background: P.pepe, flexShrink: 0 }} />
-          Minting on OpenSea · @GomeJpeg
+          {t("hero.status")} · @GomeJpeg
         </div>
 
         <h1 style={{
@@ -159,33 +99,33 @@ export default function Home() {
           GOME
         </h1>
         <h2 style={{ fontFamily: marker, fontSize: "clamp(26px, 7vw, 46px)", color: P.pepe, lineHeight: 1, margin: "0 0 20px" }}>
-          GALLERY OF MEME
+          {t("hero.subtitle")}
         </h2>
 
         <p style={{ fontFamily: cursive, fontSize: 20, color: "rgba(255,255,255,0.78)", maxWidth: 400, margin: "0 0 32px", lineHeight: 1.5 }}>
-          A gallery of the internet's most iconic memes — built for the ones who get it.
+          {t("hero.tagline")}
         </p>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 32 }}>
-          <StatBox label="Mint Price" value="TBA" />
-          <StatBox label="Supply" value={SUPPLY} />
-          <StatBox label="Chain" value="Ethereum" />
-          <StatBox label="Launchpad" value="OpenSea" />
+          <StatBox label={t("stat.mintPrice")} value={t("stat.tba")} />
+          <StatBox label={t("stat.supply")} value={SUPPLY} />
+          <StatBox label={t("stat.chain")} value="Ethereum" />
+          <StatBox label={t("stat.launchpad")} value="OpenSea" />
         </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button onClick={() => navigate("/gallery")} style={outlinePill(P.pepe)}>Gallery</button>
-          <button onClick={() => navigate("/collab")} style={outlinePill(P.bonk)}>Collab</button>
-          <WhitelistApp triggerLabel="Whitelist" triggerStyle={solidPill(P.brett)} />
+          <button onClick={() => navigate("/gallery")} style={outlinePill(P.pepe)}>{t("cta.gallery")}</button>
+          <button onClick={() => navigate("/collab")} style={outlinePill(P.bonk)}>{t("cta.collab")}</button>
+          <WhitelistApp triggerLabel={t("cta.whitelist")} triggerStyle={solidPill(P.brett)} />
         </div>
       </section>
 
       {/* STEP INTO THE GALLERY — big bold CTA */}
       <section style={{ padding: "16px 24px 64px", textAlign: "center" }}>
-        <p style={eyebrow}>Explore</p>
-        <h2 style={{ fontFamily: marker, fontSize: 32, color: "#fff", margin: "0 0 14px" }}>Step Into The Gallery</h2>
+        <p style={eyebrow}>{t("explore.eyebrow")}</p>
+        <h2 style={{ fontFamily: marker, fontSize: 32, color: "#fff", margin: "0 0 14px" }}>{t("explore.title")}</h2>
         <p style={{ fontFamily: cursive, fontSize: 18, color: P.muted, maxWidth: 420, margin: "0 auto 30px", lineHeight: 1.5 }}>
-          Pepe, Brett, Bonk, the lore, and everything else GOME has to show off — all in one place.
+          {t("explore.desc")}
         </p>
         <button
           onClick={() => navigate("/gallery")}
@@ -195,7 +135,7 @@ export default function Home() {
             padding: "18px 40px", cursor: "pointer", boxShadow: `0 0 34px ${P.pepe}55`,
           }}
         >
-          Step Into The Gallery →
+          {t("explore.button")}
         </button>
       </section>
 
@@ -203,117 +143,29 @@ export default function Home() {
       <CollectionMarquee images={COLLECTION_IMAGES} supply={SUPPLY} />
 
       {/* CHARACTER SECTIONS */}
-      <CharacterSection
-        bg={P.pepe} name="PEPE" img="/PEPE.PNG"
-        blurb="The face of internet culture. A legendary frog whose countless expressions became the language of memes, evolving from comic panels into one of the internet's most recognizable icons."
-      />
-      <CharacterSection
-        bg={`linear-gradient(160deg, ${P.bonk}, #ec4899)`} name="BONK" img="/BONK.PNG"
-        blurb="The dog that bonked its way into crypto history. A cheerful Shiba Inu mascot that embodies community, fun, and the playful spirit of decentralized internet culture."
-      />
-      <CharacterSection
-        bg={P.brett} name="BRETT" img="/BRETT.PNG"
-        blurb="The internet's laid-back best friend. Known for his calm attitude and signature blue look, Brett represents the easygoing side of meme culture, earning a devoted following across Web3 communities."
-      />
+      <CharacterSection bg={P.pepe} name="PEPE" img="/PEPE.PNG" blurb={t("character.pepe")} />
+      <CharacterSection bg={`linear-gradient(160deg, ${P.bonk}, #ec4899)`} name="BONK" img="/BONK.PNG" blurb={t("character.bonk")} />
+      <CharacterSection bg={P.brett} name="BRETT" img="/BRETT.PNG" blurb={t("character.brett")} />
 
       {/* MEME ME */}
       <section style={{ padding: "64px 24px", textAlign: "center" }}>
-        <p style={eyebrow}>No Mercy</p>
-        <h2 style={{ fontFamily: marker, fontSize: 30, color: "#fff", margin: "0 0 12px" }}>Roast Me</h2>
+        <p style={eyebrow}>{t("roast.eyebrow")}</p>
+        <h2 style={{ fontFamily: marker, fontSize: 30, color: "#fff", margin: "0 0 12px" }}>{t("roast.title")}</h2>
         <p style={{ fontFamily: cursive, fontSize: 17, color: P.muted, maxWidth: 380, margin: "0 auto 32px" }}>
-          We'll pull your profile and roast you on the spot.
+          {t("roast.desc")}
         </p>
         <MemeMe />
       </section>
 
-      {/* TASKS */}
+      {/* TASKS — its own component, see @/components/TasksPanel */}
       <main style={{ maxWidth: 700, margin: "0 auto", padding: "8px 24px 72px" }}>
-        <p style={eyebrow}>Earn Points</p>
-        <h2 style={{ fontFamily: marker, fontSize: 30, color: "#fff", margin: "0 0 10px" }}>Collect Points</h2>
-        <p style={{ fontFamily: cursive, fontSize: 17, color: P.muted, margin: "0 0 32px" }}>
-          Complete the tasks below to climb the leaderboard.
-        </p>
-
-        <p style={{ fontFamily: mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: P.muted, marginBottom: 14 }}>
-          Follow & Join
-        </p>
-        <div style={{
-          display: "flex", alignItems: "center", gap: 16, padding: 20, borderRadius: 18,
-          border: `1px solid ${P.border}`, background: P.surface, marginBottom: 36,
-        }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12, background: `${followTask.color}1a`,
-            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-          }}>
-            <Twitter size={20} color={followTask.color} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>X / Twitter</span>
-              <span style={{ fontFamily: mono, fontSize: 12, color: followTask.color }}>@GomeJpeg</span>
-            </div>
-            <p style={{ margin: "4px 0 0", fontSize: 12, color: P.muted }}>
-              Follow GOME on X for drops, alpha, and announcements.
-            </p>
-          </div>
-          <TaskClaimButton task={followTask} claimed={claimed.has(followTask.id)} busy={busy} onClaim={() => claim(followTask)} />
-        </div>
-
-        <p style={{ fontFamily: mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: P.muted, marginBottom: 14 }}>
-          Tweet Engagement
-        </p>
-        <div style={{ borderRadius: 18, border: `1px solid ${P.border}`, background: P.surface, overflow: "hidden" }}>
-          <div style={{ padding: 16, borderBottom: `1px solid ${P.border}` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-              <Twitter size={14} color={P.brett} />
-              <span style={{ fontSize: 11, color: P.muted, fontFamily: mono }}>Post #{TWEET_ID}</span>
-              <a href={TWEET_URL} target="_blank" rel="noreferrer" style={{
-                marginLeft: "auto", display: "flex", alignItems: "center", gap: 4,
-                fontSize: 10, color: P.muted, textDecoration: "none",
-              }}>
-                <ExternalLink size={12} /> Open on X
-              </a>
-            </div>
-            <blockquote className="twitter-tweet" data-theme="dark">
-              <a href={TWEET_URL}>View Tweet</a>
-            </blockquote>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}>
-            {tweetTasks.map((t, i) => {
-              const Icon = t.icon!;
-              const isClaimed = claimed.has(t.id);
-              return (
-                <div key={t.id} style={{
-                  padding: "18px 8px", textAlign: "center",
-                  borderRight: i < tweetTasks.length - 1 ? `1px solid ${P.border}` : "none",
-                }}>
-                  <Icon size={18} color={t.color} style={{ marginBottom: 6 }} />
-                  <p style={{ margin: "0 0 2px", fontSize: 12, fontWeight: 700 }}>{t.label}</p>
-                  <p style={{ margin: "0 0 10px", fontFamily: mono, fontSize: 11, fontWeight: 700, color: t.color }}>+{t.points}</p>
-                  <button
-                    disabled={isClaimed || busy}
-                    onClick={() => claim(t)}
-                    style={{
-                      width: "100%", padding: "8px 0", borderRadius: 8, border: "none",
-                      background: isClaimed ? "rgba(255,255,255,0.06)" : t.color,
-                      color: isClaimed ? P.muted : "#fff", fontFamily: mono, fontWeight: 700, fontSize: 11,
-                      cursor: isClaimed ? "default" : "pointer", textTransform: "uppercase", letterSpacing: "0.04em",
-                    }}
-                  >
-                    {isClaimed ? "Claimed" : "Claim"}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <TasksPanel onPointsChange={setTotalPoints} />
       </main>
 
       {/* LEADERBOARD */}
       <section style={{ padding: "16px 24px 80px", textAlign: "center" }}>
-        <p style={eyebrow}>Top 100</p>
-        <h2 style={{ fontFamily: marker, fontSize: 30, color: "#fff", margin: "0 0 32px" }}>Leaderboard</h2>
+        <p style={eyebrow}>{t("leaderboard.eyebrow")}</p>
+        <h2 style={{ fontFamily: marker, fontSize: 30, color: "#fff", margin: "0 0 32px" }}>{t("leaderboard.title")}</h2>
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
           <Leaderboard limit={10} showViewAll />
         </div>
@@ -325,13 +177,14 @@ export default function Home() {
 /* Infinite horizontal scroll of numbered collection pieces, rotated like scattered photos */
 function CollectionMarquee({ images, supply }: { images: string[]; supply: string }) {
   const [paused, setPaused] = useState(false);
+  const { t } = useLanguage();
   const rotations = [-3, 2, -1.5, 3, -2, 1, -3.5, 2.5, -1, 1.5];
 
   return (
     <section style={{ padding: "8px 0 56px", overflow: "hidden" }}>
       <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 24px", textAlign: "center", marginBottom: 4 }}>
-        <p style={eyebrow}>The Collection</p>
-        <h2 style={{ fontFamily: marker, fontSize: 30, color: "#fff", margin: "0 0 8px" }}>Some Of The Crew</h2>
+        <p style={eyebrow}>{t("collection.eyebrow")}</p>
+        <h2 style={{ fontFamily: marker, fontSize: 30, color: "#fff", margin: "0 0 8px" }}>{t("collection.title")}</h2>
       </div>
 
       <div style={{ overflow: "hidden", cursor: "grab" }} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
@@ -357,7 +210,7 @@ function CollectionMarquee({ images, supply }: { images: string[]; supply: strin
       </div>
 
       <p style={{ textAlign: "center", fontFamily: mono, fontSize: 11, letterSpacing: "0.1em", color: P.muted, textTransform: "uppercase" }}>
-        {supply} Supply · More Revealed Soon
+        {supply} {t("collection.captionSuffix")}
       </p>
     </section>
   );
@@ -384,35 +237,6 @@ function StatBox({ label, value }: { label: string; value: string }) {
     <div style={{ background: P.surface, border: `1px solid ${P.border}`, borderRadius: 14, padding: "12px 18px", minWidth: 108 }}>
       <p style={{ margin: "0 0 4px", fontFamily: mono, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: P.muted }}>{label}</p>
       <p style={{ margin: 0, fontFamily: mono, fontWeight: 700, fontSize: 16, color: "#fff" }}>{value}</p>
-    </div>
-  );
-}
-
-function TaskClaimButton({ task, claimed, busy, onClaim }: { task: typeof TASKS[0]; claimed: boolean; busy: boolean; onClaim: () => void }) {
-  if (claimed) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: mono, fontSize: 12, fontWeight: 700, color: P.pepe, flexShrink: 0 }}>
-        <CheckCircle2 size={16} /> Claimed
-      </div>
-    );
-  }
-  return (
-    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-      <a href={task.url} target="_blank" rel="noreferrer" style={{
-        padding: "8px 14px", borderRadius: 10, border: `1px solid ${P.border}`,
-        color: P.text, textDecoration: "none", fontFamily: mono, fontSize: 11, fontWeight: 700,
-      }}>Open</a>
-      <button
-        disabled={busy}
-        onClick={onClaim}
-        style={{
-          padding: "8px 14px", borderRadius: 10, border: "none", background: task.color,
-          color: "#fff", fontFamily: mono, fontWeight: 700, fontSize: 11, cursor: "pointer",
-          textTransform: "uppercase", letterSpacing: "0.04em",
-        }}
-      >
-        Claim +{task.points}
-      </button>
     </div>
   );
 }
