@@ -17,8 +17,8 @@ const P = {
   text: "#f5f5f5", muted: "rgba(255,255,255,0.45)",
   pepe: "#3ddc52", brett: "#3b82f6", bonk: "#f97316",
 };
-const serif = "'Playfair Display', serif";
-const body = "'Space Grotesk', sans-serif";
+const serif = "'Permanent Marker', cursive";
+const body = "'Space Mono', monospace";
 
 const TWEET_URL = "https://x.com/i/status/2070602933767389663";
 
