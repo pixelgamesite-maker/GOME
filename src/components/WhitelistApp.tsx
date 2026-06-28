@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/i18n";
 
 /**
  * WhitelistApp — self-contained trigger button + application modal flow.
@@ -22,22 +23,16 @@ const body = "'Space Mono', monospace";
 
 const TWEET_URL = "https://x.com/i/status/2070602933767389663";
 
-const TASKS = [
-  { key: "follow", label: "Follow @GomeJpeg", url: "https://x.com/GomeJpeg" },
-  { key: "retweet", label: "Retweet pinned post", url: TWEET_URL },
-  { key: "quote", label: "Quote tweet pinned post", url: TWEET_URL, needsInput: true, placeholder: "Paste your quote tweet link" },
-];
-
 type Step = "idle" | "confirm" | "form" | "success";
 
 export default function WhitelistApp({
-  triggerLabel = "Whitelist",
+  triggerLabel,
   triggerStyle,
 }: { triggerLabel?: string; triggerStyle?: React.CSSProperties }) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [step, setStep] = useState<Step>("idle");
   const [alreadyApplied, setAlreadyApplied] = useState(false);
-  const [checked, setChecked] = useState(false);
   const [wallet, setWallet] = useState("");
   const [quoteUrl, setQuoteUrl] = useState("");
   const [done, setDone] = useState<Set<string>>(new Set());
@@ -47,24 +42,29 @@ export default function WhitelistApp({
   const meta = user?.user_metadata || {};
   const handle = meta.preferred_username || meta.user_name || "anon";
 
+  const TASKS = [
+    { key: "follow", label: t("wl.follow"), url: "https://x.com/GomeJpeg" },
+    { key: "retweet", label: t("wl.retweet"), url: TWEET_URL },
+    { key: "quote", label: t("wl.quote"), url: TWEET_URL, needsInput: true, placeholder: t("wl.quotePlaceholder") },
+  ];
+
   useEffect(() => { checkExisting(); }, [user]);
   const checkExisting = async () => {
     if (!user) return;
     const { data } = await supabase.from("whitelist_apps").select("id").eq("user_id", user.id).maybeSingle();
     setAlreadyApplied(!!data);
-    setChecked(true);
   };
 
-  const openTask = (t: typeof TASKS[0]) => {
-    window.open(t.url, "_blank", "noopener");
-    setDone((prev) => new Set([...prev, t.key]));
+  const openTask = (tk: typeof TASKS[0]) => {
+    window.open(tk.url, "_blank", "noopener");
+    setDone((prev) => new Set([...prev, tk.key]));
   };
 
   const submit = async () => {
     if (!user) return;
-    if (!wallet.trim()) { setError("Wallet address is required."); return; }
-    if (!/^0x[a-fA-F0-9]{40}$/.test(wallet.trim())) { setError("That doesn't look like a valid EVM address (0x…)."); return; }
-    if (done.has("quote") && !quoteUrl.trim()) { setError("Paste your quote tweet link."); return; }
+    if (!wallet.trim()) { setError(t("wl.walletRequired")); return; }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(wallet.trim())) { setError(t("wl.walletInvalid")); return; }
+    if (done.has("quote") && !quoteUrl.trim()) { setError(t("wl.quoteRequired")); return; }
 
     setSubmitting(true);
     setError("");
@@ -76,7 +76,7 @@ export default function WhitelistApp({
     });
     setSubmitting(false);
 
-    if (dbError) { setError("Submission failed. Try again."); return; }
+    if (dbError) { setError(t("wl.submitFailed")); return; }
     setAlreadyApplied(true);
     setStep("success");
   };
@@ -86,20 +86,20 @@ export default function WhitelistApp({
   return (
     <>
       <button onClick={openModal} style={triggerStyle || defaultTriggerStyle}>
-        {triggerLabel}
+        {triggerLabel || t("cta.whitelist")}
       </button>
 
       {step === "confirm" && (
         <Overlay onClose={() => setStep("idle")}>
           <h2 style={{ fontFamily: serif, fontSize: 26, margin: "0 0 10px", color: P.text }}>
-            Apply for the Whitelist
+            {t("wl.confirmTitle")}
           </h2>
           <p style={{ color: P.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-            A few quick tasks, your wallet, and you're in the running for a guaranteed mint spot.
+            {t("wl.confirmDesc")}
           </p>
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={() => setStep("idle")} style={ghostBtn}>Not now</button>
-            <button onClick={() => setStep("form")} style={solidBtn(P.brett)}>Let's go →</button>
+            <button onClick={() => setStep("idle")} style={ghostBtn}>{t("wl.notNow")}</button>
+            <button onClick={() => setStep("form")} style={solidBtn(P.brett)}>{t("wl.letsGo")}</button>
           </div>
         </Overlay>
       )}
@@ -107,33 +107,33 @@ export default function WhitelistApp({
       {step === "form" && (
         <Overlay onClose={() => setStep("idle")}>
           <h2 style={{ fontFamily: serif, fontSize: 24, margin: "0 0 4px", color: P.text }}>
-            Whitelist Application
+            {t("wl.formTitle")}
           </h2>
-          <p style={{ color: P.muted, fontSize: 12, marginBottom: 22 }}>Applying as @{handle}</p>
+          <p style={{ color: P.muted, fontSize: 12, marginBottom: 22 }}>{t("wl.applyingAs", { handle })}</p>
 
-          <p style={label}>Complete tasks</p>
+          <p style={label}>{t("wl.completeTasks")}</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
-            {TASKS.map((t) => {
-              const isDone = done.has(t.key);
+            {TASKS.map((tk) => {
+              const isDone = done.has(tk.key);
               return (
-                <div key={t.key}>
+                <div key={tk.key}>
                   <div style={{
                     display: "flex", alignItems: "center", gap: 12, padding: "10px 14px",
                     borderRadius: 12, background: isDone ? `${P.pepe}1a` : P.surface,
                     border: `1px solid ${isDone ? P.pepe : P.border}`,
                   }}>
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: P.text }}>{t.label}</span>
-                    <button onClick={() => openTask(t)} style={{
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: P.text }}>{tk.label}</span>
+                    <button onClick={() => openTask(tk)} style={{
                       fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 8,
                       border: "none", cursor: "pointer",
                       background: isDone ? "transparent" : P.text,
                       color: isDone ? P.pepe : "#000",
-                    }}>{isDone ? "Done ✓" : "Go →"}</button>
+                    }}>{isDone ? t("wl.done") : t("wl.go")}</button>
                   </div>
-                  {t.needsInput && isDone && (
+                  {tk.needsInput && isDone && (
                     <input
                       value={quoteUrl} onChange={(e) => setQuoteUrl(e.target.value)}
-                      placeholder={t.placeholder} style={{ ...inputStyle, marginTop: 6 }}
+                      placeholder={tk.placeholder} style={{ ...inputStyle, marginTop: 6 }}
                     />
                   )}
                 </div>
@@ -141,13 +141,13 @@ export default function WhitelistApp({
             })}
           </div>
 
-          <p style={label}>EVM Wallet Address</p>
+          <p style={label}>{t("wl.walletLabel")}</p>
           <input value={wallet} onChange={(e) => setWallet(e.target.value)} placeholder="0x…" style={inputStyle} />
 
           {error && <p style={{ color: "#ff6b6b", fontSize: 12, marginTop: 10 }}>{error}</p>}
 
           <button onClick={submit} disabled={submitting} style={{ ...solidBtn(P.brett), width: "100%", marginTop: 20, opacity: submitting ? 0.6 : 1 }}>
-            {submitting ? "Submitting…" : "Submit Application →"}
+            {submitting ? t("wl.submitting") : t("wl.submit")}
           </button>
         </Overlay>
       )}
@@ -155,12 +155,12 @@ export default function WhitelistApp({
       {step === "success" && (
         <Overlay onClose={() => setStep("idle")}>
           <h2 style={{ fontFamily: serif, fontSize: 26, margin: "0 0 10px", color: P.pepe }}>
-            {alreadyApplied ? "You're In The Queue" : "Application Received"}
+            {alreadyApplied ? t("wl.successAlready") : t("wl.successNew")}
           </h2>
           <p style={{ color: P.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-            We review applications manually. Keep an eye on @GomeJpeg for selection updates.
+            {t("wl.successDesc")}
           </p>
-          <button onClick={() => setStep("idle")} style={ghostBtn}>Close</button>
+          <button onClick={() => setStep("idle")} style={ghostBtn}>{t("wl.close")}</button>
         </Overlay>
       )}
     </>
