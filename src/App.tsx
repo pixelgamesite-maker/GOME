@@ -8,6 +8,7 @@ import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import Leaderboard from "@/pages/leaderboard";
 import Collab from "@/pages/collab";
+import Tasks from "@/pages/tasks";
 import AuthCallback from "@/pages/auth/callback";
 
 /* ── Gallery ── */
@@ -38,6 +39,7 @@ function App() {
               {/* Protected-ish (components gate themselves) */}
               <Route path="/home" component={Home} />
               <Route path="/leaderboard" component={Leaderboard} />
+              <Route path="/tasks" component={Tasks} />
 
               {/* Gallery vertical routes */}
               <Route path="/gallery" component={GalleryPepe} />
