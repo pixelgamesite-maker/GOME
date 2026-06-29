@@ -23,6 +23,7 @@ const dict: Record<Lang, Record<string, any>> = {
   en: {
     nav: { out: "Out", pts: "pts" },
     gallery: { badge: "Gallery", soon: "Soon" },
+    menu: { home: "Home", gallery: "Gallery", leaderboard: "Leaderboard", tasks: "Tasks", collab: "Collab" },
     hero: {
       status: "Minting on OpenSea",
       subtitle: "Gallery Of Meme",
@@ -47,7 +48,7 @@ const dict: Record<Lang, Record<string, any>> = {
       brett: "The internet's laid-back best friend. Known for his calm attitude and signature blue look, Brett represents the easygoing side of meme culture, earning a devoted following across Web3 communities.",
     },
     roast: { eyebrow: "No Mercy", title: "Roast Me", desc: "We'll pull your profile and roast you on the spot." },
-    roastCard: { cta: "Roast Me →", reroll: "Reroll", shareX: "Share on X", status: "STATUS", about: "ABOUT", power: "POWER", weakness: "WEAKNESS", rating: "RATING" },
+    roastCard: { cta: "Roast Me →", reroll: "Reroll", shareX: "Share on X", status: "STATUS", about: "ABOUT", power: "POWER", weakness: "WEAKNESS", rating: "RATING", viewMine: "View My Roast", nextIn: "Next roast in {time}", cooldownHint: "Reroll available in {time}" },
     prank: {
       doNotTap: "DO NOT TAP THIS BUTTON",
       caught1: "I can't believe you clicked on the button.",
@@ -98,6 +99,7 @@ const dict: Record<Lang, Record<string, any>> = {
   zh: {
     nav: { out: "退出", pts: "积分" },
     gallery: { badge: "图库", soon: "即将上线" },
+    menu: { home: "首页", gallery: "图库", leaderboard: "排行榜", tasks: "任务", collab: "合作" },
     hero: {
       status: "正在 OpenSea 上铸造",
       subtitle: "表情包画廊",
@@ -122,7 +124,7 @@ const dict: Record<Lang, Record<string, any>> = {
       brett: "互联网上最随性的好朋友。以淡定的态度和标志性的蓝色形象著称，Brett 代表着表情包文化中轻松自在的一面，在 Web3 社区中拥有大批忠实粉丝。",
     },
     roast: { eyebrow: "毫不留情", title: "吐槽我", desc: "我们会调取你的资料，当场吐槽你。" },
-    roastCard: { cta: "吐槽我 →", reroll: "重新生成", shareX: "分享到 X", status: "状态", about: "简介", power: "能力", weakness: "弱点", rating: "评分" },
+    roastCard: { cta: "吐槽我 →", reroll: "重新生成", shareX: "分享到 X", status: "状态", about: "简介", power: "能力", weakness: "弱点", rating: "评分", viewMine: "查看我的吐槽", nextIn: "{time} 后可再次吐槽", cooldownHint: "{time} 后可重新生成" },
     prank: {
       doNotTap: "请勿点击此按钮",
       caught1: "真不敢相信你点了这个按钮。",
@@ -173,6 +175,7 @@ const dict: Record<Lang, Record<string, any>> = {
   ko: {
     nav: { out: "로그아웃", pts: "포인트" },
     gallery: { badge: "갤러리", soon: "출시 예정" },
+    menu: { home: "홈", gallery: "갤러리", leaderboard: "리더보드", tasks: "임무", collab: "콜라보" },
     hero: {
       status: "OpenSea에서 민팅 중",
       subtitle: "밈 갤러리",
@@ -197,7 +200,7 @@ const dict: Record<Lang, Record<string, any>> = {
       brett: "인터넷의 느긋한 친구. 차분한 성격과 시그니처 블루 컬러로 알려진 Brett은 밈 문화의 여유로운 면을 대표하며, Web3 커뮤니티에서 많은 충성 팬을 보유하고 있습니다.",
     },
     roast: { eyebrow: "자비 없음", title: "나를 놀려줘", desc: "당신의 프로필을 가져와서 그 자리에서 놀려드립니다." },
-    roastCard: { cta: "나를 놀려줘 →", reroll: "다시 굴리기", shareX: "X에 공유하기", status: "상태", about: "소개", power: "능력", weakness: "약점", rating: "평점" },
+    roastCard: { cta: "나를 놀려줘 →", reroll: "다시 굴리기", shareX: "X에 공유하기", status: "상태", about: "소개", power: "능력", weakness: "약점", rating: "평점", viewMine: "내 결과 보기", nextIn: "{time} 후 다시 가능", cooldownHint: "{time} 후 다시 생성 가능" },
     prank: {
       doNotTap: "이 버튼을 누르지 마세요",
       caught1: "이 버튼을 누를 줄은 몰랐네요.",
