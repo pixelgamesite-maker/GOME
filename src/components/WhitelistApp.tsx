@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/i18n";
@@ -168,11 +169,11 @@ export default function WhitelistApp({
 }
 
 function Overlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  return (
+  return createPortal(
     <div
       style={{
         position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)",
-        zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+        zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
       }}
       onClick={onClose}
     >
@@ -186,7 +187,8 @@ function Overlay({ children, onClose }: { children: React.ReactNode; onClose: ()
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
