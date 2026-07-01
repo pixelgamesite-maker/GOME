@@ -33,6 +33,7 @@ export default function WhitelistApp({
   const [open, setOpen] = useState(false);
   const [wallet, setWallet] = useState("");
   const [quoteUrl, setQuoteUrl] = useState("");
+  const [ticked, setTicked] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(alreadySubmitted);
@@ -105,16 +106,27 @@ export default function WhitelistApp({
                 {/* Task checklist */}
                 <div style={{ marginBottom: 24, display: "flex", flexDirection: "column", gap: 8 }}>
                   {[
-                    { label: "Follow @GomeJpeg", url: "https://x.com/GomeJpeg" },
-                    { label: "Repost pinned post", url: TWEET_URL },
-                    { label: "Quote & tag 2 frens", url: TWEET_URL },
+                    { key: "follow", label: "Follow @GomeJpeg", url: "https://x.com/GomeJpeg" },
+                    { key: "repost", label: "Repost pinned post", url: TWEET_URL },
+                    { key: "quote",  label: "Quote & tag 2 frens", url: TWEET_URL },
                   ].map((task) => (
-                    <a key={task.label} href={task.url} target="_blank" rel="noopener noreferrer" style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
-                      background: P.surface, border: `1px solid ${P.border}`,
-                      textDecoration: "none", color: P.text, fontSize: 13,
-                    }}>
-                      <span style={{ width: 14, height: 14, border: `1px solid ${P.muted}`, flexShrink: 0 }} />
+                    <a key={task.key} href={task.url} target="_blank" rel="noopener noreferrer"
+                      onClick={() => setTicked((prev) => ({ ...prev, [task.key]: true }))}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
+                        background: ticked[task.key] ? `${P.pepe}12` : P.surface,
+                        border: `1px solid ${ticked[task.key] ? P.pepe : P.border}`,
+                        textDecoration: "none", color: ticked[task.key] ? P.pepe : P.text, fontSize: 13,
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <span style={{
+                        width: 16, height: 16, border: `1.5px solid ${ticked[task.key] ? P.pepe : P.muted}`,
+                        flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                        background: ticked[task.key] ? P.pepe : "transparent", fontSize: 11, color: "#000",
+                      }}>
+                        {ticked[task.key] ? "✓" : ""}
+                      </span>
                       {task.label}
                       <span style={{ marginLeft: "auto", fontSize: 11, color: P.muted }}>→</span>
                     </a>
