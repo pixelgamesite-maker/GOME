@@ -1,12 +1,14 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { useLocation } from "wouter";
+import { createPortal } from "react-dom";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import { useLanguage } from "@/lib/i18n";
-import { ArrowRight, Lock } from "lucide-react";
+import { ChevronUp, Lock, X } from "lucide-react";
 
 const P = {
   bg: "#070707", surface: "#141414",
-  border: "rgba(255,255,255,0.07)", gold: "#C9A84C",
+  border: "rgba(255,255,255,0.08)", gold: "#C9A84C",
   text: "#f5f5f5", muted: "rgba(255,255,255,0.42)", dim: "rgba(255,255,255,0.16)",
   pepe: "#3ddc52", brett: "#3b82f6", bonk: "#f97316",
 };
@@ -15,172 +17,136 @@ const pixel = "'Press Start 2P', monospace";
 const mono = "'Space Mono', monospace";
 
 export const GALLERY_PAGES = [
-  { id: "pepe", label: "PEPE", path: "/gallery/pepe", color: P.pepe, img: "/pepe.gif", tag: "OG frog energy" },
-  { id: "brett", label: "BRETT", path: "/gallery/brett", color: P.brett, img: "/brett.gif", tag: "Money never sleeps" },
-  { id: "bonk", label: "BONK", path: "/gallery/bonk", color: P.bonk, img: "/bonk.gif", tag: "Unhinged & orange" },
-  { id: "lore", label: "Lore", path: "/gallery/lore", color: P.gold, img: "/GOME-LOGO.png", tag: "The full story" },
-  { id: "memegenerator", label: "Meme Gen", path: "/gallery/memegenerator", color: P.dim, soon: true, img: "/memegenerator.gif", tag: "Coming Season 1" },
-  { id: "museum", label: "Museum", path: "/gallery/museum", color: P.dim, soon: true, img: "/museum.gif", tag: "Coming Season 1" },
+  { id: "pepe",         label: "PEPE",    path: "/gallery/pepe",          color: P.pepe,  img: "/pepe.gif",          tag: "OG frog energy"      },
+  { id: "brett",        label: "BRETT",   path: "/gallery/brett",         color: P.brett, img: "/brett.gif",         tag: "Money never sleeps"  },
+  { id: "bonk",         label: "BONK",    path: "/gallery/bonk",          color: P.bonk,  img: "/bonk.gif",          tag: "Unhinged & orange"   },
+  { id: "lore",         label: "Lore",    path: "/gallery/lore",          color: P.gold,  img: "/GOME-LOGO.png",     tag: "The full story"      },
+  { id: "memegenerator",label: "Meme Gen",path: "/gallery/memegenerator", color: P.dim,   img: "/memegenerator.gif", tag: "Coming Season 1", soon: true },
+  { id: "museum",       label: "Museum",  path: "/gallery/museum",        color: P.dim,   img: "/museum.gif",        tag: "Coming Season 1", soon: true },
 ];
 
-export default function GalleryLayout({ pageId }: { children?: React.ReactNode; pageId: string }) {
+/**
+ * GalleryLayout — simple shell: Header + children + Footer + floating nav pill.
+ * No carousel. Each page just renders its own content as normal page flow.
+ * The floating pill at the bottom lets you jump to any other gallery page.
+ */
+export default function GalleryLayout({
+  children,
+  pageId,
+}: {
+  children: React.ReactNode;
+  pageId: string;
+}) {
   const [, navigate] = useLocation();
   const { t } = useLanguage();
+  const [open, setOpen] = useState(false);
+
+  const current = GALLERY_PAGES.find((p) => p.id === pageId);
+  const accent = current?.color || P.gold;
 
   return (
-    <div style={{ minHeight: "100vh", background: P.bg, color: P.text, fontFamily: mono, display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", background: P.bg, color: P.text, fontFamily: mono }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap');`}</style>
 
       <Header />
 
-      {/* The whole page is one animated vertical carousel */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}>
-        <GalleryCarousel pageId={pageId} onSelect={(path) => navigate(path)} t={t} />
-      </div>
-    </div>
-  );
-}
+      {/* Page content — just flows naturally */}
+      <main>{children}</main>
 
-/* ── Vertical, swipeable, tap-to-navigate carousel ──
-   Single transformed track + plain-flow children, instead of each card
-   individually position:absolute + its own transform. Far more reliable
-   for click/tap hit-testing across browsers. */
-function GalleryCarousel({
-  pageId, onSelect, t,
-}: { pageId: string; onSelect: (path: string) => void; t: (key: string) => string }) {
-  const startIndex = Math.max(0, GALLERY_PAGES.findIndex((p) => p.id === pageId));
-  const [index, setIndex] = useState(startIndex);
-  const dragStartY = useRef<number | null>(null);
+      <Footer />
 
-  useEffect(() => {
-    const i = GALLERY_PAGES.findIndex((p) => p.id === pageId);
-    if (i >= 0) setIndex(i);
-  }, [pageId]);
-
-  const total = GALLERY_PAGES.length;
-  const cardHeight = 312;
-  const gap = 20;
-  const step = cardHeight + gap;
-
-  const goTo = (i: number) => setIndex(Math.max(0, Math.min(total - 1, i)));
-
-  const onTouchStart = (e: React.TouchEvent) => { dragStartY.current = e.touches[0].clientY; };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (dragStartY.current === null) return;
-    const delta = dragStartY.current - e.changedTouches[0].clientY;
-    if (Math.abs(delta) > 36) goTo(index + (delta > 0 ? 1 : -1));
-    dragStartY.current = null;
-  };
-  const onWheel = (e: React.WheelEvent) => {
-    if (Math.abs(e.deltaY) < 12) return;
-    goTo(index + (e.deltaY > 0 ? 1 : -1));
-  };
-
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", maxWidth: 440 }}>
-      <div
-        style={{ position: "relative", width: "100%", height: "min(560px, 70vh)", overflow: "hidden" }}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        onWheel={onWheel}
-      >
-        <div
+      {/* Floating gallery navigator pill */}
+      <div style={{
+        position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+        zIndex: 90, display: "flex", alignItems: "center",
+      }}>
+        <button
+          onClick={() => setOpen(true)}
           style={{
-            display: "flex", flexDirection: "column", gap,
-            transform: `translateY(calc(50% - ${index * step + cardHeight / 2}px))`,
-            transition: "transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)",
+            display: "flex", alignItems: "center", gap: 10,
+            fontFamily: pixel, fontSize: 10, lineHeight: 1,
+            color: "#fff", background: "#0c0c0c",
+            border: `2px solid ${accent}`,
+            padding: "12px 20px", cursor: "pointer",
+            boxShadow: `0 4px 24px rgba(0,0,0,0.6), 0 0 16px ${accent}44`,
+            whiteSpace: "nowrap",
           }}
         >
-          {GALLERY_PAGES.map((p, i) => {
-            const offset = i - index;
-            const isActive = offset === 0;
-            const visible = Math.abs(offset) <= 2;
+          <span style={{ color: accent }}>◈</span>
+          {current?.label ?? "GALLERY"}
+          <ChevronUp size={14} style={{ opacity: 0.7 }} />
+        </button>
+      </div>
 
-            return (
-              <button
-                key={p.id}
-                onClick={() => !p.soon && onSelect(p.path)}
-                style={{
-                  flexShrink: 0, width: "100%", height: cardHeight, borderRadius: 0,
-                  overflow: "hidden", border: "none", padding: 0, textAlign: "left",
-                  cursor: p.soon ? "not-allowed" : "pointer",
-                  transform: `scale(${isActive ? 1 : 0.88})`,
-                  opacity: visible ? (isActive ? 1 : 0.4) : 0,
-                  filter: isActive ? "none" : "blur(0.5px)",
-                  transition: "transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s, filter 0.4s",
-                  background: P.surface,
-                  boxShadow: isActive ? `0 18px 40px rgba(0,0,0,0.5), inset 0 0 0 2px ${p.color}` : `inset 0 0 0 1px ${P.border}`,
-                  pointerEvents: visible ? "auto" : "none",
-                  position: "relative",
-                }}
-              >
-                <div style={{ position: "relative", width: "100%", height: "64%", background: "#000" }}>
-                  <img
-                    src={p.img}
-                    alt={p.label}
-                    style={{
-                      width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated",
-                      filter: p.soon ? "grayscale(0.65) brightness(0.5)" : "none",
-                    }}
-                  />
-                  <div style={{
-                    position: "absolute", left: 0, right: 0, bottom: 0, height: 48,
-                    background: `linear-gradient(180deg, transparent, ${P.surface})`,
-                  }} />
-                </div>
+      {/* Gallery page picker — portal so it's never clipped */}
+      {open && createPortal(
+        <>
+          <div
+            onClick={() => setOpen(false)}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 998 }}
+          />
+          <div style={{
+            position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)",
+            zIndex: 999, width: "min(340px, 90vw)",
+            background: "#0c0c0c", border: `2px solid ${accent}`,
+            boxShadow: `0 8px 40px rgba(0,0,0,0.8), 0 0 20px ${accent}33`,
+          }}>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "12px 16px", borderBottom: `1px solid ${P.border}`,
+            }}>
+              <span style={{ fontFamily: pixel, fontSize: 10, color: P.muted }}>GALLERY</span>
+              <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", color: P.muted, cursor: "pointer", padding: 2 }}>
+                <X size={16} />
+              </button>
+            </div>
 
-                <div style={{
-                  padding: "14px 20px 0", display: "flex", alignItems: "flex-start",
-                  justifyContent: "space-between", gap: 12,
-                }}>
-                  <div>
-                    <h3 style={{ fontFamily: pixel, fontSize: 14, lineHeight: 1.5, margin: "0 0 7px", color: p.soon ? P.dim : p.color }}>
-                      {p.label}
-                    </h3>
-                    <p style={{ margin: 0, fontSize: 11, letterSpacing: "0.04em", color: P.muted }}>{p.tag}</p>
+            {GALLERY_PAGES.map((p) => {
+              const isCurrent = p.id === pageId;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => { if (!p.soon) { setOpen(false); navigate(p.path); } }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 14, width: "100%",
+                    padding: "14px 16px", border: "none", borderBottom: `1px solid ${P.border}`,
+                    background: isCurrent ? `${p.color}12` : "transparent",
+                    cursor: p.soon ? "not-allowed" : "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <div style={{ width: 40, height: 40, flexShrink: 0, background: "#000", overflow: "hidden" }}>
+                    <img
+                      src={p.img} alt={p.label}
+                      style={{
+                        width: "100%", height: "100%", objectFit: "cover",
+                        filter: p.soon ? "grayscale(0.7) brightness(0.5)" : "none",
+                        imageRendering: "pixelated",
+                      }}
+                    />
                   </div>
-
-                  {p.soon ? (
-                    <span style={{
-                      flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5,
-                      fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
-                      color: P.dim, background: "rgba(255,255,255,0.04)",
-                      border: `1px solid ${P.border}`, borderRadius: 0, padding: "5px 11px",
-                    }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{
+                      margin: 0, fontFamily: pixel, fontSize: 11, lineHeight: 1.5,
+                      color: p.soon ? P.dim : isCurrent ? p.color : P.text,
+                    }}>{p.label}</p>
+                    <p style={{ margin: "3px 0 0", fontSize: 11, color: P.muted }}>{p.tag}</p>
+                  </div>
+                  {isCurrent && (
+                    <span style={{ flexShrink: 0, width: 7, height: 7, borderRadius: "50%", background: p.color }} />
+                  )}
+                  {p.soon && (
+                    <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: P.dim, flexShrink: 0 }}>
                       <Lock size={10} /> {t("gallery.soon")}
                     </span>
-                  ) : (
-                    <span style={{
-                      flexShrink: 0, width: 28, height: 28, borderRadius: "50%",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      background: `${p.color}1a`, border: `1px solid ${p.color}55`, color: p.color,
-                    }}>
-                      <ArrowRight size={14} />
-                    </span>
                   )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Side dots */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 9, flexShrink: 0 }}>
-        {GALLERY_PAGES.map((p, i) => (
-          <button
-            key={p.id}
-            onClick={() => goTo(i)}
-            aria-label={p.label}
-            style={{
-              width: i === index ? 10 : 7, height: i === index ? 10 : 7, borderRadius: "50%",
-              border: "none", padding: 0, cursor: "pointer",
-              background: i === index ? p.color : "rgba(255,255,255,0.2)",
-              transition: "all 0.25s",
-            }}
-          />
-        ))}
-      </div>
+                </button>
+              );
+            })}
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   );
 }
