@@ -25,7 +25,10 @@ const pixelClip = "polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8p
 const SUPPLY = "4,404";
 
 // Real numbered collection assets — 1.jpg through 14.jpg exist now
-const COLLECTION_IMAGES = Array.from({ length: 16 }, (_, i) => `/${i + 1}.jpg`);
+const COLLECTION_IMAGES = [
+  ...Array.from({ length: 11 }, (_, i) => `/${i + 1}.jpg`),
+  ...Array.from({ length: 5 }, (_, i) => `/${i + 12}.JPG`),
+];
 
 export default function Home() {
   const { user, loading } = useAuth();
