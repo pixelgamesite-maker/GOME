@@ -12,6 +12,7 @@ import Tasks from "@/pages/tasks";
 import AuthCallback from "@/pages/auth/callback";
 
 /* ── Gallery ── */
+import GalleryLayout from "@/components/GalleryLayout";
 import GalleryPepe from "@/pages/gallery/pepe";
 import GalleryBrett from "@/pages/gallery/brett";
 import GalleryBonk from "@/pages/gallery/bonk";
@@ -42,7 +43,7 @@ function App() {
               <Route path="/tasks" component={Tasks} />
 
               {/* Gallery vertical routes */}
-              <Route path="/gallery" component={GalleryPepe} />
+              <Route path="/gallery">{() => <GalleryLayout />}</Route>
               <Route path="/gallery/pepe" component={GalleryPepe} />
               <Route path="/gallery/brett" component={GalleryBrett} />
               <Route path="/gallery/bonk" component={GalleryBonk} />
