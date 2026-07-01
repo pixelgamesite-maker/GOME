@@ -25,10 +25,7 @@ const pixelClip = "polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8p
 const SUPPLY = "4,404";
 
 // Real numbered collection assets — 1.jpg through 14.jpg exist now
-const COLLECTION_IMAGES = [
-  ...Array.from({ length: 11 }, (_, i) => `/${i + 1}.jpg`),
-  ...Array.from({ length: 5 }, (_, i) => `/${i + 12}.jpg),
-];
+const COLLECTION_IMAGES = Array.from({ length: 16 }, (_, i) => `/${i + 1}.jpg`);
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -44,7 +41,6 @@ export default function Home() {
   return (
     <div style={{ background: P.bg, minHeight: "100vh", color: P.text, fontFamily: mono }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap');
         @keyframes gome-pulse {
           0%, 100% { text-shadow: 0 0 22px rgba(255,255,255,0.4); }
           50% { text-shadow: 0 0 44px rgba(255,255,255,0.8); }
