@@ -27,7 +27,7 @@ const SUPPLY = "4,404";
 // Real numbered collection assets — 1.jpg through 14.jpg exist now
 const COLLECTION_IMAGES = [
   ...Array.from({ length: 11 }, (_, i) => `/${i + 1}.jpg`),
-  ...Array.from({ length: 5 }, (_, i) => `/${i + 12}.JPG`),
+  ...Array.from({ length: 5 }, (_, i) => `/${i + 12}.jpg),
 ];
 
 export default function Home() {
