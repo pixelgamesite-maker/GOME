@@ -35,9 +35,8 @@ const FOLLOW_TASK = {
 };
 
 const ENGAGEMENT_TASKS = [
-  { id: "like",    num: 1, label: "Like pinned post",      desc: "Like the pinned post on the GOME X account.",          points: 10, url: TWEET_URL },
-  { id: "retweet", num: 2, label: "Repost pinned post",    desc: "Repost the pinned post to spread the word.",           points: 20, url: TWEET_URL },
-  { id: "comment", num: 3, label: "Comment & tag 3 frens", desc: "Drop a comment and tag 3 frens who need to know GOME.", points: 20, url: TWEET_URL },
+  { id: "retweet", num: 1, label: "Repost pinned post",           desc: "Repost the pinned post to spread the word.",                    points: 20, url: TWEET_URL },
+  { id: "comment", num: 2, label: "Quote & tag 2 frens",          desc: "Quote the pinned post and tag 2 frens who need to know GOME.",   points: 20, url: TWEET_URL },
 ];
 
 type TaskLog = { task_type: string; points: number };
