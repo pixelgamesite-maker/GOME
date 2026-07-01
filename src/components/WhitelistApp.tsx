@@ -31,6 +31,7 @@ export default function WhitelistApp({
 }) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
+  const [handle, setHandle] = useState("");
   const [wallet, setWallet] = useState("");
   const [quoteUrl, setQuoteUrl] = useState("");
   const [ticked, setTicked] = useState<Record<string, boolean>>({});
@@ -42,12 +43,14 @@ export default function WhitelistApp({
 
   const submit = async () => {
     setError(null);
+    if (!handle.trim()) { setError("Please enter your X handle."); return; }
     if (!wallet.trim()) { setError("Please enter your wallet address."); return; }
     if (!/^0x[a-fA-F0-9]{40}$/.test(wallet.trim())) { setError("Doesn't look like a valid EVM address (0x…)."); return; }
     if (!quoteUrl.trim()) { setError("Please paste your quote tweet link."); return; }
 
     setSubmitting(true);
-    const { error: dbErr } = await supabase.from("whitelist_apps").insert({
+    const { error: dbErr } = await supabase.from("gome").insert({
+      x_username: handle.trim().replace(/^@/, ""),
       wallet: wallet.trim(),
       quote_url: quoteUrl.trim(),
     });
@@ -134,6 +137,7 @@ export default function WhitelistApp({
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <Field label="Your X handle" placeholder="@yourhandle" value={handle} onChange={setHandle} />
                   <Field label="EVM wallet address" placeholder="0x..." value={wallet} onChange={setWallet} />
                   <Field label="Quote tweet link" placeholder="https://x.com/yourhandle/status/..." value={quoteUrl} onChange={setQuoteUrl} />
                 </div>
