@@ -4,8 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/lib/i18n";
 
 /* ── Pages ── */
-import Landing from "@/pages/landing";
-import Home from "@/pages/home";
+              <Route path="/" component={Home} />import Home from "@/pages/home";
 import Leaderboard from "@/pages/leaderboard";
 import Collab from "@/pages/collab";
 import Tasks from "@/pages/tasks";
@@ -33,7 +32,7 @@ function App() {
           <WouterRouter>
             <Switch>
               {/* Public */}
-              <Route path="/" component={Landing} />
+              <Route path="/" component={Home} />
               <Route path="/auth/callback" component={AuthCallback} />
               <Route path="/collab" component={Collab} />
 
