@@ -12,7 +12,6 @@ export default function Tasks() {
 
   return (
     <div style={{ background: P.bg, minHeight: "100vh", color: P.text, fontFamily: mono }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap');`}</style>
       <Header />
 
       <main style={{ maxWidth: 700, margin: "0 auto", padding: "36px 24px 72px" }}>
@@ -38,7 +37,7 @@ export default function Tasks() {
           </button>
         </div>
 
-        <TasksPanel onPointsChange={() => {}} />
+        <TasksPanel />
 
         {/* Placeholder for future community task sections */}
         <div style={{
