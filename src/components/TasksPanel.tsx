@@ -1,32 +1,43 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { Twitter, CheckCircle2 } from "lucide-react";
+import { Twitter, CheckCircle2, Timer } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 /**
  * TasksPanel — GOME Tasks.
- * Follow task gets its own prominent card (no tweet preview).
- * Engagement tasks (Like, Repost, Comment) are a numbered list below.
- * Clicking GO opens X in a new tab and starts a 20-second countdown
- * ring on the button — Claim unlocks when it hits 0.
+ * Styled after Earnity's social quests: clean dark cards, consistent
+ * accent color, no rainbow-per-task. Follow & Join gets its own section,
+ * engagement tasks are a clean numbered list below. No tweet embed.
+ * GO opens X → 20-second countdown → CLAIM unlocks.
  */
 
+const ACCENT = "#3ddc52"; // GOME green — one consistent accent
 const P = {
-  bg: "#070707", surface: "#141414", border: "rgba(255,255,255,0.1)",
-  text: "#f5f5f5", muted: "rgba(255,255,255,0.45)",
-  pepe: "#3ddc52", brett: "#3b82f6", bonk: "#f97316",
+  bg: "#0c0c0c",
+  card: "rgba(255,255,255,0.04)",
+  border: "rgba(255,255,255,0.08)",
+  text: "#f5f5f5",
+  muted: "rgba(255,255,255,0.4)",
+  dim: "rgba(255,255,255,0.2)",
 };
-const pixel = "'Press Start 2P', monospace";
 const mono = "'Space Mono', monospace";
+const pixel = "'Press Start 2P', monospace";
 const TWEET_URL = "https://x.com/i/status/2070602933767389663";
 const COUNTDOWN = 20;
 
-const FOLLOW_TASK = { id: "follow", label: "Follow @GomeJpeg on X", points: 50, url: "https://x.com/GomeJpeg", color: P.pepe };
+const FOLLOW_TASK = {
+  id: "follow",
+  label: "Follow @GomeJpeg on X",
+  desc: "Follow GOME on X for drops, alpha, and announcements.",
+  points: 50,
+  url: "https://x.com/GomeJpeg",
+};
 
 const ENGAGEMENT_TASKS = [
-  { id: "like",    num: 1, label: "Like pinned post",      points: 10, url: TWEET_URL, color: P.brett },
-  { id: "retweet", num: 2, label: "Repost pinned post",    points: 20, url: TWEET_URL, color: P.bonk  },
-  { id: "comment", num: 3, label: "Comment & tag 3 frens", points: 20, url: TWEET_URL, color: P.pepe  },
+  { id: "like",    num: 1, label: "Like pinned post",      desc: "Like the pinned post on the GOME X account.",          points: 10, url: TWEET_URL },
+  { id: "retweet", num: 2, label: "Repost pinned post",    desc: "Repost the pinned post to spread the word.",           points: 20, url: TWEET_URL },
+  { id: "comment", num: 3, label: "Comment & tag 3 frens", desc: "Drop a comment and tag 3 frens who need to know GOME.", points: 20, url: TWEET_URL },
 ];
 
 type TaskLog = { task_type: string; points: number };
@@ -37,6 +48,7 @@ export default function TasksPanel({ onPointsChange }: { onPointsChange?: (total
   const [busyId, setBusyId] = useState<string | null>(null);
   const [readyAt, setReadyAt] = useState<Record<string, number>>({});
   const [now, setNow] = useState(Date.now());
+  const [sessionPts, setSessionPts] = useState(0);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 250);
@@ -55,20 +67,21 @@ export default function TasksPanel({ onPointsChange }: { onPointsChange?: (total
     onPointsChange?.(pts);
   };
 
-  const go = (task: { id: string; url: string }) => {
-    window.open(task.url, "_blank", "noopener");
-    setReadyAt((prev) => ({ ...prev, [task.id]: Date.now() + COUNTDOWN * 1000 }));
+  const go = (id: string, url: string) => {
+    window.open(url, "_blank", "noopener");
+    setReadyAt((prev) => ({ ...prev, [id]: Date.now() + COUNTDOWN * 1000 }));
   };
 
-  const claim = async (task: { id: string; points: number }) => {
-    if (!user || claimed.has(task.id) || busyId) return;
-    setBusyId(task.id);
-    const { error } = await supabase.from("points_log").insert({ user_id: user.id, task_type: task.id, points: task.points });
+  const claim = async (id: string, points: number) => {
+    if (!user || claimed.has(id) || busyId) return;
+    setBusyId(id);
+    const { error } = await supabase.from("points_log").insert({ user_id: user.id, task_type: id, points });
     if (error) {
       console.error("[TasksPanel] claim:", error.message);
     } else {
-      const { error: rpc } = await supabase.rpc("increment_points", { p_user_id: user.id, p_amount: task.points });
-      if (rpc) console.error("[TasksPanel] increment_points:", rpc.message);
+      const { error: rpc } = await supabase.rpc("increment_points", { p_user_id: user.id, p_amount: points });
+      if (rpc) console.error("[TasksPanel] rpc:", rpc.message);
+      setSessionPts((p) => p + points);
       await fetchPoints();
     }
     setBusyId(null);
@@ -81,124 +94,178 @@ export default function TasksPanel({ onPointsChange }: { onPointsChange?: (total
     return s > 0 ? s : 0;
   };
 
-  const allEngagementClaimed = ENGAGEMENT_TASKS.every((t) => claimed.has(t.id));
+  const allDone = [...ENGAGEMENT_TASKS].every((t) => claimed.has(t.id)) && claimed.has(FOLLOW_TASK.id);
 
   return (
     <div style={{ fontFamily: mono }}>
 
+      {/* Session banner */}
+      <AnimatePresence>
+        {sessionPts > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 24,
+              padding: "8px 16px", background: `${ACCENT}18`, border: `1px solid ${ACCENT}40`,
+              color: ACCENT, fontSize: 13, fontWeight: 700,
+            }}
+          >
+            <CheckCircle2 size={15} /> +{sessionPts} pts earned this session
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Follow & Join ── */}
-      <p style={sectionLabel}>Follow & Join</p>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 16, padding: 18,
-        background: P.surface, border: `1px solid ${P.border}`,
-        borderLeft: `3px solid ${FOLLOW_TASK.color}`, marginBottom: 32,
-      }}>
-        <div style={{
-          width: 42, height: 42, borderRadius: 10, background: `${FOLLOW_TASK.color}1a`,
-          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-        }}>
-          <Twitter size={20} color={FOLLOW_TASK.color} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 700, color: P.text }}>{FOLLOW_TASK.label}</p>
-          <p style={{ margin: 0, fontFamily: pixel, fontSize: 9, lineHeight: 1.4, color: FOLLOW_TASK.color }}>
-            +{FOLLOW_TASK.points} pts
-          </p>
-        </div>
-        <ActionButton task={FOLLOW_TASK} claimed={claimed.has(FOLLOW_TASK.id)} busy={!!busyId} secs={secsLeft(FOLLOW_TASK.id)} onGo={() => go(FOLLOW_TASK)} onClaim={() => claim(FOLLOW_TASK)} countdown={COUNTDOWN} />
+      <p style={sectionLbl}>Follow & Join</p>
+      <div style={{ marginBottom: 32 }}>
+        <motion.div
+          initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.05, type: "spring", damping: 22 }}
+          style={{
+            display: "flex", alignItems: "center", gap: 14,
+            padding: "16px 18px",
+            background: P.card, border: `1px solid ${P.border}`,
+            borderRadius: 0,
+          }}
+        >
+          <div style={{
+            width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+            background: `${ACCENT}15`, border: `1px solid ${ACCENT}30`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Twitter size={20} color={ACCENT} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontWeight: 700, fontSize: 14, color: P.text }}>X / Twitter</span>
+              <span style={{ fontSize: 12, color: ACCENT }}>@GomeJpeg</span>
+            </div>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: P.muted, lineHeight: 1.5 }}>{FOLLOW_TASK.desc}</p>
+          </div>
+          <RowAction
+            id={FOLLOW_TASK.id} points={FOLLOW_TASK.points}
+            claimed={claimed.has(FOLLOW_TASK.id)} busy={!!busyId}
+            secs={secsLeft(FOLLOW_TASK.id)} countdown={COUNTDOWN}
+            onGo={() => go(FOLLOW_TASK.id, FOLLOW_TASK.url)}
+            onClaim={() => claim(FOLLOW_TASK.id, FOLLOW_TASK.points)}
+          />
+        </motion.div>
       </div>
 
       {/* ── GOME Engagement ── */}
-      <p style={sectionLabel}>GOME Engagement</p>
-      <div>
+      <p style={sectionLbl}>GOME Engagement</p>
+      <div style={{ border: `1px solid ${P.border}`, overflow: "hidden" }}>
         {ENGAGEMENT_TASKS.map((task, i) => {
           const isClaimed = claimed.has(task.id);
           const secs = secsLeft(task.id);
           return (
-            <div
+            <motion.div
               key={task.id}
+              initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 + i * 0.07, type: "spring", damping: 22 }}
               style={{
                 display: "flex", alignItems: "center", gap: 14, padding: "16px 18px",
-                background: isClaimed ? `${task.color}0d` : P.surface,
-                borderTop: i === 0 ? `1px solid ${P.border}` : "none",
-                borderBottom: `1px solid ${P.border}`,
-                borderLeft: `3px solid ${isClaimed ? task.color : "transparent"}`,
+                background: isClaimed ? `${ACCENT}08` : P.card,
+                borderBottom: i < ENGAGEMENT_TASKS.length - 1 ? `1px solid ${P.border}` : "none",
               }}
             >
-              {/* Step circle */}
+              {/* Number / check */}
               <div style={{
-                width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+                width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                background: isClaimed ? task.color : "rgba(255,255,255,0.06)",
+                background: isClaimed ? ACCENT : "rgba(255,255,255,0.06)",
                 border: isClaimed ? "none" : `1px solid ${P.border}`,
               }}>
                 {isClaimed
-                  ? <CheckCircle2 size={15} color="#000" />
-                  : <span style={{ fontFamily: pixel, fontSize: 9, color: P.muted }}>{task.num}</span>
-                }
+                  ? <CheckCircle2 size={16} color="#000" />
+                  : <span style={{ fontFamily: pixel, fontSize: 9, color: P.dim }}>{task.num}</span>}
               </div>
+
+              {/* Label + desc */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: "0 0 3px", fontSize: 13, fontWeight: 700, color: isClaimed ? P.muted : P.text }}>{task.label}</p>
-                <p style={{ margin: 0, fontFamily: pixel, fontSize: 9, lineHeight: 1.4, color: task.color }}>+{task.points} pts</p>
+                <p style={{ margin: "0 0 3px", fontSize: 13, fontWeight: 700, color: isClaimed ? P.muted : P.text }}>
+                  {task.label}
+                </p>
+                <p style={{ margin: 0, fontSize: 11, color: P.muted, lineHeight: 1.5 }}>{task.desc}</p>
               </div>
-              <ActionButton task={task} claimed={isClaimed} busy={!!busyId} secs={secs} onGo={() => go(task)} onClaim={() => claim(task)} countdown={COUNTDOWN} />
-            </div>
+
+              {/* Points badge */}
+              <span style={{
+                flexShrink: 0, fontFamily: mono, fontSize: 12, fontWeight: 700,
+                color: isClaimed ? P.muted : ACCENT, marginRight: 10,
+              }}>+{task.points}</span>
+
+              <RowAction
+                id={task.id} points={task.points}
+                claimed={isClaimed} busy={!!busyId}
+                secs={secs} countdown={COUNTDOWN}
+                onGo={() => go(task.id, task.url)}
+                onClaim={() => claim(task.id, task.points)}
+              />
+            </motion.div>
           );
         })}
       </div>
 
-      {/* All engagement done hint */}
-      {allEngagementClaimed && (
-        <p style={{ marginTop: 16, fontFamily: pixel, fontSize: 9, lineHeight: 1.6, color: P.pepe, textAlign: "center" }}>
+      {/* All done */}
+      {allDone && (
+        <motion.p
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          style={{ marginTop: 18, fontFamily: pixel, fontSize: 9, lineHeight: 1.6, color: ACCENT, textAlign: "center" }}
+        >
           ALL GOME TASKS COMPLETE
-        </p>
+        </motion.p>
       )}
+
+      {/* Hint */}
+      <p style={{ marginTop: 16, fontSize: 11, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>
+        Each task is one-time only and persists across sessions.
+      </p>
     </div>
   );
 }
 
-function ActionButton({ task, claimed, busy, secs, onGo, onClaim, countdown }: {
-  task: { color: string }; claimed: boolean; busy: boolean;
-  secs: number | null; onGo: () => void; onClaim: () => void; countdown: number;
+/* ── Shared row-level action control ── */
+function RowAction({ id, points, claimed, busy, secs, countdown, onGo, onClaim }: {
+  id: string; points: number; claimed: boolean; busy: boolean;
+  secs: number | null; countdown: number;
+  onGo: () => void; onClaim: () => void;
 }) {
   if (claimed) return (
-    <p style={{ flexShrink: 0, fontFamily: pixel, fontSize: 9, lineHeight: 1.4, color: task.color }}>DONE</p>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${ACCENT}10`, border: `1px solid ${ACCENT}20`, color: ACCENT, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+      <CheckCircle2 size={14} /> Done
+    </div>
   );
 
   if (secs === null) return (
     <button onClick={onGo} style={{
-      flexShrink: 0, fontFamily: pixel, fontSize: 9, lineHeight: 1.4, color: P.text,
-      background: "rgba(255,255,255,0.06)", border: `1px solid ${P.border}`,
-      padding: "8px 14px", cursor: "pointer",
-    }}>GO</button>
+      flexShrink: 0, fontFamily: mono, fontSize: 12, fontWeight: 700,
+      color: P.text, background: "rgba(255,255,255,0.08)", border: `1px solid ${P.border}`,
+      padding: "8px 16px", cursor: "pointer",
+    }}>
+      Go → +{points}
+    </button>
   );
 
   if (secs > 0) return (
-    <div style={{ flexShrink: 0, position: "relative", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <svg width="44" height="44" style={{ position: "absolute", top: 0, left: 0, transform: "rotate(-90deg)" }}>
-        <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
-        <circle cx="22" cy="22" r="18" fill="none" stroke={task.color} strokeWidth="3"
-          strokeDasharray={`${2 * Math.PI * 18}`}
-          strokeDashoffset={`${2 * Math.PI * 18 * (1 - secs / countdown)}`}
-          style={{ transition: "stroke-dashoffset 0.25s linear" }}
-        />
-      </svg>
-      <span style={{ fontFamily: pixel, fontSize: 9, color: task.color, lineHeight: 1 }}>{secs}</span>
+    <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "rgba(255,200,0,0.08)", border: "1px solid rgba(255,200,0,0.2)", color: "#fbbf24", fontSize: 12, fontWeight: 700 }}>
+      <Timer size={14} style={{ animation: "pulse 1s infinite" }} /> {secs}s
     </div>
   );
 
   return (
     <button onClick={onClaim} disabled={busy} style={{
-      flexShrink: 0, fontFamily: pixel, fontSize: 9, lineHeight: 1.4, color: "#000",
-      background: task.color, border: "none", padding: "8px 14px",
-      cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
-    }}>CLAIM</button>
+      flexShrink: 0, fontFamily: mono, fontSize: 12, fontWeight: 700,
+      color: "#000", background: ACCENT, border: "none",
+      padding: "8px 16px", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
+    }}>
+      Claim
+    </button>
   );
 }
 
-const P_outer = { text: "#f5f5f5", muted: "rgba(255,255,255,0.45)" };
-const sectionLabel: React.CSSProperties = {
+const sectionLbl: React.CSSProperties = {
   fontFamily: "'Space Mono', monospace", fontSize: 10, fontWeight: 700,
-  letterSpacing: "0.15em", textTransform: "uppercase", color: P_outer.muted,
-  margin: "0 0 12px",
+  letterSpacing: "0.2em", textTransform: "uppercase",
+  color: "rgba(255,255,255,0.4)", margin: "0 0 12px",
 };
