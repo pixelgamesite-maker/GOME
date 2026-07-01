@@ -20,20 +20,36 @@ export default function AuthCallback() {
       const avatarUrl = meta.avatar_url || meta.profile_image_url || null;
       const twitterId = meta.provider_id || meta.sub || null;
 
-      // Upsert into profiles (GOME table)
-      const { error: upsertError } = await supabase.from("profiles").upsert({
-        id: u.id,
-        twitter_id: twitterId,
-        username: username,
-        display_name: displayName,
-        avatar_url: avatarUrl,
-        points_total: 0,
-      }, { onConflict: "id", ignoreDuplicates: false });
+      // Check if profile already exists — if so, only update metadata, never touch points_total
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", u.id)
+        .maybeSingle();
 
-      if (upsertError) {
-        console.error("Profile upsert failed:", upsertError.message);
-        setFailed(true);
-        return;
+      if (existing) {
+        // Returning user — just refresh their X metadata
+        await supabase.from("profiles").update({
+          twitter_id: twitterId,
+          username,
+          display_name: displayName,
+          avatar_url: avatarUrl,
+        }).eq("id", u.id);
+      } else {
+        // New user — insert with 0 points
+        const { error } = await supabase.from("profiles").insert({
+          id: u.id,
+          twitter_id: twitterId,
+          username,
+          display_name: displayName,
+          avatar_url: avatarUrl,
+          points_total: 0,
+        });
+        if (error) {
+          console.error("Profile insert failed:", error.message, error);
+          setFailed(true);
+          return;
+        }
       }
 
       navigate("/home");
@@ -62,22 +78,35 @@ export default function AuthCallback() {
   }, [navigate]);
 
   if (failed) return (
-    <div className="min-h-[100dvh] bg-[#070707] flex flex-col items-center justify-center gap-4">
-      <p style={{ fontFamily: "'Fredoka', sans-serif", color: "#ef4444", fontSize: 14 }}>
+    <div style={{
+      minHeight: "100dvh", background: "#070707",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16,
+    }}>
+      <p style={{ fontFamily: "'Space Mono', monospace", color: "#ef4444", fontSize: 13, letterSpacing: "0.1em" }}>
         AUTH FAILED
       </p>
-      <button onClick={() => navigate("/")}
-        className="px-6 py-2 rounded-lg border border-[#C9A84C]/30 text-[#C9A84C] text-xs font-bold uppercase tracking-widest hover:bg-[#C9A84C]/10">
+      <button
+        onClick={() => navigate("/")}
+        style={{
+          fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700,
+          textTransform: "uppercase", letterSpacing: "0.1em",
+          color: "#f97316", background: "transparent",
+          border: "1px solid rgba(249,115,22,0.4)", padding: "10px 24px", cursor: "pointer",
+        }}
+      >
         Return
       </button>
     </div>
   );
 
   return (
-    <div className="min-h-[100dvh] bg-[#070707] flex items-center justify-center">
+    <div style={{
+      minHeight: "100dvh", background: "#070707",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
       <p style={{
-        fontFamily: "'Space Grotesk', sans-serif",
-        fontSize: 12, color: "#C9A84C", letterSpacing: "0.2em", textTransform: "uppercase"
+        fontFamily: "'Space Mono', monospace",
+        fontSize: 12, color: "#f97316", letterSpacing: "0.2em", textTransform: "uppercase",
       }}>
         Entering the Gallery...
       </p>
