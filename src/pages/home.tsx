@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { SafeImage } from "@/components/SafeImage";
 import MemeMe from "@/components/MemeMe";
+import WhitelistApp from "@/components/WhitelistApp";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import DoNotTapButton from "@/components/DoNotTapButton";
@@ -90,7 +91,7 @@ export default function Home() {
           <div style={{ display: "flex", width: "100%", maxWidth: 460, height: 58, clipPath: pixelClip, border: "2px solid #000" }}>
             <button onClick={() => navigate("/collab")} style={splitBtn(P.bonk)}>{t("cta.collab")}</button>
             <div style={{ width: 2, background: "#000", flexShrink: 0 }} />
-            <button onClick={() => navigate("/gallery")} style={splitBtn(P.brett)}>{t("cta.gallery")}</button>
+            <WhitelistApp triggerLabel={t("cta.whitelist")} triggerStyle={splitBtn(P.brett)} />
             <div style={{ width: 2, background: "#000", flexShrink: 0 }} />
             <button onClick={() => navigate("/tasks")} style={splitBtn(P.pepe)}>{t("menu.tasks")}</button>
           </div>
